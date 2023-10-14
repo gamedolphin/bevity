@@ -1,0 +1,17 @@
+[package]
+name = "bevity-scene"
+version = "0.1.0"
+edition = "2021"
+readme = false
+
+[lib]
+path = "scene.rs"
+
+[dependencies]
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+bevity-primitives = { path = "../primitives" }
+bevity-yaml = { path = "../yaml" }
