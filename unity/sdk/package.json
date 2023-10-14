@@ -1,0 +1,6 @@
+{
+  "name": "com.wavefunk.bevity",
+  "displayName": "Bevity",
+  "version": "0.0.0",
+  "description": "Package that lets you work in bevy but use Unity as an editor for it"
+}
