@@ -30,16 +30,14 @@ pub struct UnityCamera {
 }
 
 #[derive(Component, Debug, Clone)]
-pub struct UnityCameraMeta {
+pub struct UnityCameraExtra {
     skybox: Option<Handle<Image>>,
     skybox_loaded: bool,
-    object_id: u64,
 }
 
 impl UnityCamera {
     pub fn add_camera_bundle(
         &self,
-        object_id: u64,
         transform: Transform,
         skybox: Option<&Handle<Image>>,
         commands: &mut EntityCommands,
@@ -49,10 +47,9 @@ impl UnityCamera {
             ..default()
         });
 
-        commands.insert(UnityCameraMeta {
+        commands.insert(UnityCameraExtra {
             skybox: skybox.cloned(),
             skybox_loaded: false,
-            object_id,
         });
     }
 }
@@ -60,7 +57,7 @@ impl UnityCamera {
 pub fn load_camera_skybox_system(
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
-    mut unity_cameras: Query<(Entity, &mut UnityCameraMeta)>,
+    mut unity_cameras: Query<(Entity, &mut UnityCameraExtra)>,
     mut commands: Commands,
 ) {
     for (entity, mut meta) in &mut unity_cameras {

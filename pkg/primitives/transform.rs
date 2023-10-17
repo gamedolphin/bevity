@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{UnityQuaternion, UnityVector3};
+use crate::{FileReference, UnityQuaternion, UnityVector3};
 
-#[derive(Serialize, Deserialize, Debug, Default, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct UnityTransform {
     #[serde(rename = "m_LocalPosition")]
     pub position: UnityVector3,
@@ -11,15 +11,9 @@ pub struct UnityTransform {
     pub rotation: UnityQuaternion,
     #[serde(rename = "m_LocalScale")]
     pub scale: UnityVector3,
+    #[serde(default, rename = "m_Children", skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<FileReference>,
 }
-
-#[derive(Component, Debug, Default, Copy, Clone)]
-pub struct UnityTransformMeta {
-    pub object_id: u64,
-}
-
-#[derive(Component, Debug, Default, Copy, Clone)]
-pub struct UnityTransformDirty;
 
 impl From<&UnityTransform> for Transform {
     fn from(value: &UnityTransform) -> Self {
@@ -49,6 +43,7 @@ impl From<&Transform> for UnityTransform {
             position,
             rotation,
             scale: value.scale.into(),
+            children: vec![],
         }
     }
 }

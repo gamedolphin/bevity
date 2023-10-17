@@ -1,7 +1,20 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Result;
 use serde::de::DeserializeOwned;
+
+pub fn get_assets_dir() -> PathBuf {
+    if let Some(path) = std::env::var_os("UNITY_ASSETS_PATH") {
+        return Path::new(&path).into();
+    } else if let Some(path) = std::env::var_os("CARGO_MANIFEST_DIR") {
+        return Path::new(&path).join("../Assets");
+    } else {
+        panic!("UNABLE TO FIND PATH TO UNITY ASSETS")
+    }
+}
 
 pub fn parse_unity_yaml_file<T: DeserializeOwned>(file_path: &str) -> Result<HashMap<u64, T>> {
     let file = std::fs::read_to_string(file_path)?;

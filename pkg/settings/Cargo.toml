@@ -12,4 +12,5 @@ tracing.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+bevy.workspace = true
 bevity-yaml = { path = "../yaml" }

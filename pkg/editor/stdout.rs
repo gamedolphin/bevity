@@ -1,20 +1,11 @@
-use bevity_primitives::{UnityTransformDirty, UnityTransformMeta};
+use bevity_scene::{UnityChangeObject, UnityTransformDirty, UnityTransformMeta};
 use bevy::{
     prelude::*,
     utils::{HashMap, HashSet},
 };
 use serde::Serialize;
 
-use crate::stdin::{ChangeObject, UnityChangeObject};
-
-pub(crate) fn setup_stdout<T: serde::Serialize + Send + Sync + 'static>(app: &mut App) {
-    app.insert_resource(UnityChangeMap::default())
-        .add_systems(
-            PreUpdate,
-            (send_changes.before(clear_changes), clear_changes),
-        )
-        .add_systems(PostUpdate, track_changes::<T>);
-}
+use crate::stdin::ChangeObject;
 
 #[derive(Resource, Default)]
 pub struct UnityChangeMap {
@@ -22,12 +13,26 @@ pub struct UnityChangeMap {
     pub dirty: HashSet<u64>,
 }
 
+pub(crate) fn setup_stdout<T: serde::Serialize + Send + Sync + 'static>(app: &mut App) {
+    app.insert_resource(UnityChangeMap::default())
+        .add_systems(
+            PreUpdate,
+            (send_changes.before(clear_changes), clear_changes),
+        )
+        .add_systems(PostUpdate, track_transform::<T>);
+}
+
 fn clear_changes(mut change_map: ResMut<UnityChangeMap>) {
     change_map.changes.clear();
     change_map.dirty.clear();
 }
 
-fn track_changes<T: serde::Serialize>(
+#[derive(Serialize)]
+struct ChangeAck {
+    pub object_id: u64,
+}
+
+fn track_transform<T: serde::Serialize>(
     query: Query<
         (
             Entity,
@@ -51,11 +56,6 @@ fn track_changes<T: serde::Serialize>(
             }
         };
     }
-}
-
-#[derive(Serialize)]
-struct ChangeAck {
-    pub object_id: u64,
 }
 
 fn send_changes(change_map: ResMut<UnityChangeMap>) {

@@ -4,10 +4,10 @@ use std::{
 };
 
 use anyhow::Result;
-use bevity_materials::UnityMaterial;
+use bevity_primitives::UnityMaterial;
 use bevy::prelude::*;
 
-use crate::utils::get_assets_dir;
+use bevity_yaml::get_assets_dir;
 
 #[derive(Default)]
 pub struct ResourcesPlugin;
@@ -30,7 +30,7 @@ impl Plugin for ResourcesPlugin {
         let path = Path::new(&path);
         let materials_json = path.join("materials.json");
 
-        let materials = match bevity_materials::read_materials(path, &materials_json) {
+        let materials = match crate::read_materials(path, &materials_json) {
             Ok(m) => m,
             Err(e) => {
                 tracing::error!("failed to read materials: {:?}", e);

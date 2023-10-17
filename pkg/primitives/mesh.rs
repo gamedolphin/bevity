@@ -10,19 +10,16 @@ pub struct UnityMeshFilter {
 }
 
 impl UnityMeshFilter {
-    pub fn add_mesh_filter_meta(&self, object_id: u64, commands: &mut EntityCommands) {
-        commands.insert(UnityMeshFilterMeta {
-            object_id,
+    pub fn add_mesh_filter_meta(&self, commands: &mut EntityCommands) {
+        commands.insert(UnityMeshFilterExtra {
             mesh: self.mesh.clone(),
         });
-
-        commands.insert(UnityMeshDirty);
+        commands.insert(UnityMeshRequiresLoad);
     }
 }
 
 #[derive(Component, Debug)]
-pub struct UnityMeshFilterMeta {
-    pub object_id: u64,
+pub struct UnityMeshFilterExtra {
     pub mesh: FileReference,
 }
 
@@ -33,21 +30,18 @@ pub struct UnityMeshRenderer {
 }
 
 impl UnityMeshRenderer {
-    pub fn add_mesh_renderer_meta(&self, object_id: u64, commands: &mut EntityCommands) {
-        commands.insert(UnityMeshRendererMeta {
-            object_id,
+    pub fn add_mesh_renderer_meta(&self, commands: &mut EntityCommands) {
+        commands.insert(UnityMeshRendererExtra {
             materials: self.materials.clone(),
         });
-
-        commands.insert(UnityMeshDirty);
+        commands.insert(UnityMeshRequiresLoad);
     }
 }
 
 #[derive(Component, Debug)]
-pub struct UnityMeshRendererMeta {
-    pub object_id: u64,
+pub struct UnityMeshRendererExtra {
     pub materials: Vec<FileReference>,
 }
 
 #[derive(Component, Debug)]
-pub struct UnityMeshDirty;
+pub struct UnityMeshRequiresLoad;

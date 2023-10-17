@@ -2,7 +2,7 @@ use bevity_primitives::{FileReference, UnityColor};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
-pub struct RenderSettings {
+pub struct UnityRenderSettings {
     #[serde(alias = "m_Fog")]
     pub fog: i32,
     #[serde(alias = "m_FogColor")]

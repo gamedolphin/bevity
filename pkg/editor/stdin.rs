@@ -3,12 +3,10 @@ use std::sync::{
     Arc,
 };
 
-use bevity_primitives::{UnityTransform, UnityTransformDirty};
+use bevity_scene::{MonoBehaviour, UnityChangeObject, UnityEntityMap, UnityTransformDirty};
 use bevy::prelude::*;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-
-use crate::{scenes::UnityEntityMap, MonoBehaviour};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ChangeObject {
@@ -55,12 +53,6 @@ fn listen_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(world: &mut Worl
             }
         });
     });
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum UnityChangeObject<T> {
-    Transform(UnityTransform),
-    MonoBehaviour(T),
 }
 
 fn handle_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(
@@ -122,7 +114,7 @@ fn handle_incoming_update<T: serde::de::DeserializeOwned + MonoBehaviour>(
         let mut e = world.entity_mut(*entity);
         // println!("received instruction: {} for {:?}", f.serialized, entity);
         let Ok(obj) = serde_json::from_str::<UnityChangeObject<T>>(&f.serialized) else {
-            tracing::error!("failed to parse change object");
+            tracing::error!("failed to parse change object: {}", f.serialized);
             return;
         };
         match obj {
@@ -134,6 +126,7 @@ fn handle_incoming_update<T: serde::de::DeserializeOwned + MonoBehaviour>(
                 e.insert(UnityTransformDirty);
             }
             UnityChangeObject::MonoBehaviour(v) => v.update_component(&mut e),
+            _ => {}
         };
     });
 }

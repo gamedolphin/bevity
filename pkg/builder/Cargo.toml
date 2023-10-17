@@ -1,16 +1,15 @@
 [package]
-name = "bevity-primitives"
+name = "bevity-builder"
 version = "0.1.0"
 edition = "2021"
 readme = false
 
 [lib]
-path = "primitives.rs"
+path = "builder.rs"
 
 [dependencies]
 tracing.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
-serde.workspace = true
-bevy.workspace = true
-bevity-generator = { path = "../generator" }
+syn = { version = "2", features = ["full"] }
+genco = "0.17.5"

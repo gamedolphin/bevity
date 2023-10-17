@@ -1,16 +1,17 @@
-use std::{collections::HashMap, marker::PhantomData};
-
 use bevity_primitives::{
-    load_camera_skybox_system, FileReference, UnityMeshDirty, UnityMeshFilterMeta,
-    UnityMeshRendererMeta, UnityTransformMeta,
+    load_camera_skybox_system, FileReference, UnityMeshFilterExtra, UnityMeshRendererExtra,
+    UnityMeshRequiresLoad,
 };
-use bevity_scene::{get_transform, UnityRenderSettings, UnityScene, UnitySceneObject};
 use bevy::{
     ecs::{system::EntityCommands, world::EntityMut},
     prelude::*,
+    utils::HashMap,
 };
+use std::marker::PhantomData;
 
-use crate::resources::UnityResource;
+use crate::{
+    get_transform, ResourcesPlugin, UnityResource, UnityScene, UnitySceneObject, UnityTransformMeta,
+};
 
 #[derive(Default)]
 pub struct ScenePlugin<T>(PhantomData<T>);
@@ -26,6 +27,11 @@ pub struct UnityEntityMap {
     pub object_map: HashMap<u64, Entity>,
 }
 
+pub trait MonoBehaviour {
+    fn add_component_to_entity(&self, object_id: u64, cmd: &mut EntityCommands);
+    fn update_component(&self, cmd: &mut EntityMut);
+}
+
 impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBehaviour> Plugin
     for ScenePlugin<T>
 {
@@ -33,15 +39,11 @@ impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBeha
         // read build settings and parse all scenes
 
         app.insert_resource::<SceneResource<T>>(SceneResource::default())
+            .add_plugins(ResourcesPlugin)
             .insert_resource(UnityEntityMap::default())
             .add_systems(Update, load_scene_if_changed::<T>)
             .add_systems(Update, (load_camera_skybox_system, load_unity_mesh_system));
     }
-}
-
-pub trait MonoBehaviour {
-    fn add_component_to_entity(&self, cmd: &mut EntityCommands);
-    fn update_component(&self, cmd: &mut EntityMut);
 }
 
 #[derive(Default)]
@@ -128,14 +130,14 @@ fn load_scene<T>(
                     Some((c.component.file_id, comp))
                 })
                 .for_each(|(object_id, comp)| {
-                    spawn_component(
+                    comp.spawn_meta(object_id, &mut entity);
+                    comp.spawn_components(
                         object_id,
-                        comp,
                         local,
                         &render_settings,
-                        &mut entity,
                         &unity_res,
-                    )
+                        &mut entity,
+                    );
                 });
 
             map_res.object_map.insert(*id, entity.id());
@@ -167,43 +169,15 @@ fn load_scene<T>(
         });
 }
 
-fn spawn_component<T>(
-    object_id: u64,
-    comp: &UnitySceneObject<T>,
-    transform: Transform,
-    render_settings: &Option<&UnityRenderSettings>,
-    commands: &mut EntityCommands,
-    unity_res: &Res<UnityResource>,
-) where
-    T: MonoBehaviour,
-{
-    match comp {
-        UnitySceneObject::Camera(c) => {
-            let skybox = render_settings
-                .and_then(|r| r.skybox_material.guid.clone())
-                .and_then(|guid| unity_res.materials_map.get(&guid))
-                .and_then(|mat| mat.get_skybox_texture_id())
-                .and_then(|tex_id| unity_res.textures.get(&tex_id));
-
-            c.add_camera_bundle(object_id, transform, skybox, commands);
-        }
-        UnitySceneObject::Light(l) => l.add_light_bundle(object_id, transform, commands),
-        UnitySceneObject::MeshFilter(mf) => mf.add_mesh_filter_meta(object_id, commands),
-        UnitySceneObject::MeshRenderer(mr) => mr.add_mesh_renderer_meta(object_id, commands),
-        UnitySceneObject::MonoBehaviour(v) => v.add_component_to_entity(commands),
-        _ => {}
-    };
-}
-
 pub fn load_unity_mesh_system(
     meshes: Query<
         (
             Entity,
             &Transform,
-            &UnityMeshFilterMeta,
-            &UnityMeshRendererMeta,
+            &UnityMeshFilterExtra,
+            &UnityMeshRendererExtra,
         ),
-        With<UnityMeshDirty>,
+        With<UnityMeshRequiresLoad>,
     >,
     mut commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
@@ -225,12 +199,12 @@ pub fn load_unity_mesh_system(
             ..default()
         });
 
-        cmd.remove::<UnityMeshDirty>();
+        cmd.remove::<UnityMeshRequiresLoad>();
     }
 }
 
 fn load_material(
-    mesh_renderer: &UnityMeshRendererMeta,
+    mesh_renderer: &UnityMeshRendererExtra,
     unity_res: &ResMut<UnityResource>,
 ) -> Option<Handle<StandardMaterial>> {
     let mr = mesh_renderer.materials.first()?.guid.clone()?;

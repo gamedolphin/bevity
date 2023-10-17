@@ -18,5 +18,7 @@ bevy.workspace = true
 parking_lot.workspace = true
 bevity-primitives = { path = "../primitives" }
 bevity-scene = { path = "../scene" }
+bevity-editor = { path = "../editor" }
 bevity-settings = { path = "../settings" }
-bevity-materials = { path = "../materials" }
+bevity-generator = { path = "../generator" }
+bevity-builder = { path = "../builder" }

@@ -27,20 +27,8 @@ pub struct Shadows {
     pub shadow_type: i32,
 }
 
-#[derive(Component, Debug, Clone)]
-pub struct UnityLightMeta {
-    object_id: u64,
-}
-
 impl UnityLight {
-    pub fn add_light_bundle(
-        &self,
-        object_id: u64,
-        transform: Transform,
-        commands: &mut EntityCommands,
-    ) {
-        commands.insert(UnityLightMeta { object_id });
-
+    pub fn add_light_bundle(&self, transform: Transform, commands: &mut EntityCommands) {
         match self.light_type {
             1 => {
                 commands.insert(DirectionalLightBundle {

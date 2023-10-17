@@ -13,3 +13,5 @@ tracing.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+quote = "1"
+syn = "2"

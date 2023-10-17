@@ -126,8 +126,15 @@ public static class Watcher
                 oldValues[k] = EditorJsonUtility.ToJson(comp);
             }
             object boxedStruct = goOrComponent;
-            EditorJsonUtility.FromJsonOverwrite(v, boxedStruct);
-            goOrComponent = boxedStruct as Object;
+            try
+            {
+                EditorJsonUtility.FromJsonOverwrite(v, boxedStruct);
+                goOrComponent = boxedStruct as Object;
+            }
+            catch
+            {
+                Debug.Log($"Failed to deserialize : {v}");
+            }
         }
 
         incomingChanges.Clear();

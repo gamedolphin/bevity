@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
-use bevity_scene::UnityScene;
+use bevity_scene::{MonoBehaviour, SceneResource, UnityScene, BEVITY_CONST};
 use bevy::prelude::*;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    scenes::SceneResource, stdin::setup_stdin, stdout::setup_stdout, MonoBehaviour, BEVITY_CONST,
-};
+mod stdin;
+mod stdout;
+
+pub use stdout::UnityChangeMap;
 
 BEVITY_CONST!(ENABLE_BEVITY_EDITOR);
 BEVITY_CONST!(BEVITY_EDITOR_SCENE);
@@ -49,21 +50,9 @@ impl<T: Clone + Sync + Send + Default + DeserializeOwned + Serialize + 'static +
         })
         .add_systems(Startup, set_initial_scene::<T>);
 
-        setup_stdin::<T>(app);
-        setup_stdout::<T>(app);
+        stdin::setup_stdin::<T>(app);
+        stdout::setup_stdout::<T>(app);
     }
-}
-
-fn set_initial_scene<T: Clone + Sync + Send + 'static>(
-    editor: Res<EditorResource<T>>,
-    mut scenes: ResMut<SceneResource<T>>,
-) {
-    scenes.scenes.insert(
-        editor.current_scene_name.clone(),
-        editor.current_scene.clone(),
-    );
-
-    scenes.current = Some(editor.current_scene_name.clone())
 }
 
 fn get_scene_path() -> Option<String> {
@@ -76,4 +65,16 @@ fn get_scene_path() -> Option<String> {
     };
 
     Some(scene_path.to_string())
+}
+
+fn set_initial_scene<T: Clone + Sync + Send + 'static>(
+    editor: Res<EditorResource<T>>,
+    mut scenes: ResMut<SceneResource<T>>,
+) {
+    scenes.scenes.insert(
+        editor.current_scene_name.clone(),
+        editor.current_scene.clone(),
+    );
+
+    scenes.current = Some(editor.current_scene_name.clone())
 }

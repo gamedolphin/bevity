@@ -282,10 +282,41 @@ name = "bevity"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bevity-materials",
+ "bevity-builder",
+ "bevity-editor",
+ "bevity-generator",
  "bevity-primitives",
  "bevity-scene",
  "bevity-settings",
+ "bevy",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "bevity-builder"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "genco",
+ "syn 2.0.38",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "bevity-editor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevity-generator",
+ "bevity-primitives",
+ "bevity-scene",
+ "bevity-yaml",
  "bevy",
  "parking_lot",
  "serde",
@@ -300,21 +331,9 @@ name = "bevity-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "quote",
  "serde",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "bevity-materials"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bevity-primitives",
- "bevity-yaml",
- "bevy",
- "serde",
- "serde_json",
+ "syn 2.0.38",
  "thiserror",
  "tracing",
 ]
@@ -324,6 +343,7 @@ name = "bevity-primitives"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevity-generator",
  "bevy",
  "serde",
  "thiserror",
@@ -335,9 +355,12 @@ name = "bevity-scene"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevity-generator",
  "bevity-primitives",
  "bevity-yaml",
+ "bevy",
  "serde",
+ "serde_json",
  "serde_yaml",
  "thiserror",
  "tracing",
@@ -349,6 +372,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevity-yaml",
+ "bevy",
  "serde",
  "thiserror",
  "tracing",
@@ -1645,6 +1669,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "genco"
+version = "0.17.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4fd234893ffe9cf5b81224ebb1d21bbe2eeb94d95bac3ea25c97cba7293304d"
+dependencies = [
+ "genco-macros",
+ "relative-path",
+ "smallvec",
+]
+
+[[package]]
+name = "genco-macros"
+version = "0.17.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e1c8cd3de2f32ee05ba2adaa90f8d0c354ffa0adeb2d186978d7ae70e5025e9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2756,6 +2802,12 @@ name = "regex-syntax"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
+
+[[package]]
+name = "relative-path"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c707298afce11da2efef2f600116fa93ffa7a032b5d7b628aa17711ec81383ca"
 
 [[package]]
 name = "renderdoc-sys"
