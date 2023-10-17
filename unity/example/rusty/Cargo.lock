@@ -282,12 +282,29 @@ name = "bevity"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevity-materials",
  "bevity-primitives",
  "bevity-scene",
  "bevity-settings",
  "bevy",
+ "parking_lot",
  "serde",
+ "serde_json",
  "serde_yaml",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "bevity-materials"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevity-primitives",
+ "bevity-yaml",
+ "bevy",
+ "serde",
+ "serde_json",
  "thiserror",
  "tracing",
 ]
@@ -297,6 +314,7 @@ name = "bevity-primitives"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevy",
  "serde",
  "thiserror",
  "tracing",
@@ -1617,6 +1635,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "genco"
+version = "0.17.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4fd234893ffe9cf5b81224ebb1d21bbe2eeb94d95bac3ea25c97cba7293304d"
+dependencies = [
+ "genco-macros",
+ "relative-path",
+ "smallvec",
+]
+
+[[package]]
+name = "genco-macros"
+version = "0.17.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e1c8cd3de2f32ee05ba2adaa90f8d0c354ffa0adeb2d186978d7ae70e5025e9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2730,6 +2770,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
+name = "relative-path"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c707298afce11da2efef2f600116fa93ffa7a032b5d7b628aa17711ec81383ca"
+
+[[package]]
 name = "renderdoc-sys"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2773,8 +2819,13 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 name = "rusty"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bevity",
  "bevy",
+ "genco",
+ "serde",
+ "serde_json",
+ "syn 2.0.38",
 ]
 
 [[package]]

@@ -13,7 +13,10 @@ anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
+serde_json.workspace = true
 bevy.workspace = true
+parking_lot.workspace = true
 bevity-primitives = { path = "../primitives" }
 bevity-scene = { path = "../scene" }
 bevity-settings = { path = "../settings" }
+bevity-materials = { path = "../materials" }

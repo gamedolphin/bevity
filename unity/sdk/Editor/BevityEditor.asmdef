@@ -1,0 +1,16 @@
+{
+    "name": "BevityEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3064a57e3e6cb7467a8357866295a7ad"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

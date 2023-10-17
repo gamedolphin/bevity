@@ -1,0 +1,18 @@
+[package]
+name = "bevity-materials"
+version = "0.1.0"
+edition = "2021"
+readme = false
+
+[lib]
+path = "materials.rs"
+
+[dependencies]
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+bevy.workspace = true
+bevity-yaml = { path = "../yaml" }
+bevity-primitives = { path = "../primitives" }

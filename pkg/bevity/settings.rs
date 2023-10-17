@@ -12,9 +12,7 @@ pub struct UnitySettings {
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        let Some(path) = std::env::var_os("CARGO_MANIFEST_DIR") else {
-            return;
-        };
+        let path = crate::utils::get_assets_dir();
 
         let path = Path::new(&path).join("..");
         let Ok(player) = bevity_settings::parse_project_settings_file(&path) else {

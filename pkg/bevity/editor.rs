@@ -1,19 +1,30 @@
-use bevy::prelude::*;
+use std::marker::PhantomData;
 
-#[macro_export]
-macro_rules! BEVITY_CONST {
-    ( $x: ident ) => {
-        const $x: &str = stringify!($x);
-    };
-}
+use bevity_scene::UnityScene;
+use bevy::prelude::*;
+use serde::{de::DeserializeOwned, Serialize};
+
+use crate::{
+    scenes::SceneResource, stdin::setup_stdin, stdout::setup_stdout, MonoBehaviour, BEVITY_CONST,
+};
 
 BEVITY_CONST!(ENABLE_BEVITY_EDITOR);
 BEVITY_CONST!(BEVITY_EDITOR_SCENE);
 
 #[derive(Default)]
-pub struct EditorPlugin;
+pub struct EditorPlugin<T: DeserializeOwned + Clone + Sync + Send + Default + 'static>(
+    PhantomData<T>,
+);
 
-impl Plugin for EditorPlugin {
+#[derive(Resource, Default)]
+pub struct EditorResource<T> {
+    pub current_scene_name: String,
+    pub current_scene: UnityScene<T>,
+}
+
+impl<T: Clone + Sync + Send + Default + DeserializeOwned + Serialize + 'static + MonoBehaviour>
+    Plugin for EditorPlugin<T>
+{
     fn build(&self, app: &mut App) {
         if std::env::var_os(ENABLE_BEVITY_EDITOR).is_none() {
             return;
@@ -24,14 +35,35 @@ impl Plugin for EditorPlugin {
             return;
         };
 
-        let scene = match bevity_scene::parse_scene_file(&scene_path) {
+        let scene = match bevity_scene::parse_scene_file::<T>(&scene_path) {
             Ok(scene) => scene,
             Err(e) => {
-                tracing::error!("failed to parse unity scene: {}", e);
+                tracing::error!("failed to parse unity scene: {:?}", e);
                 return;
             }
         };
+
+        app.insert_resource(EditorResource {
+            current_scene_name: scene_path,
+            current_scene: scene,
+        })
+        .add_systems(Startup, set_initial_scene::<T>);
+
+        setup_stdin::<T>(app);
+        setup_stdout::<T>(app);
     }
+}
+
+fn set_initial_scene<T: Clone + Sync + Send + 'static>(
+    editor: Res<EditorResource<T>>,
+    mut scenes: ResMut<SceneResource<T>>,
+) {
+    scenes.scenes.insert(
+        editor.current_scene_name.clone(),
+        editor.current_scene.clone(),
+    );
+
+    scenes.current = Some(editor.current_scene_name.clone())
 }
 
 fn get_scene_path() -> Option<String> {

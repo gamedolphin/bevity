@@ -2,5 +2,8 @@
   "name": "com.wavefunk.bevity",
   "displayName": "Bevity",
   "version": "0.0.0",
-  "description": "Package that lets you work in bevy but use Unity as an editor for it"
+    "description": "Package that lets you work in bevy but use Unity as an editor for it",
+    "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.0.2"
+    }
 }

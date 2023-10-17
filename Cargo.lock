@@ -282,12 +282,39 @@ name = "bevity"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevity-materials",
  "bevity-primitives",
  "bevity-scene",
  "bevity-settings",
  "bevy",
+ "parking_lot",
  "serde",
+ "serde_json",
  "serde_yaml",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "bevity-generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "bevity-materials"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevity-primitives",
+ "bevity-yaml",
+ "bevy",
+ "serde",
+ "serde_json",
  "thiserror",
  "tracing",
 ]
@@ -297,6 +324,7 @@ name = "bevity-primitives"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevy",
  "serde",
  "thiserror",
  "tracing",
