@@ -7,7 +7,7 @@ use crate::objects::UnitySceneObject;
 use crate::UnityRenderSettings;
 
 #[derive(Default, Clone)]
-pub struct UnityScene<T>(pub HashMap<u64, UnitySceneObject<T>>);
+pub struct UnityScene<T>(pub HashMap<i64, UnitySceneObject<T>>);
 
 impl<T> UnityScene<T> {
     pub fn get_render_settings(&self) -> Option<&UnityRenderSettings> {
@@ -63,9 +63,9 @@ MeshFilter:
 
         let parsed = parse_scene::<()>(yaml_input)?;
 
-        assert!(parsed.0.contains_key(&963194228u64));
+        assert!(parsed.0.contains_key(&963194228i64));
 
-        if let Some(UnitySceneObject::Transform(transform)) = parsed.0.get(&963194228u64) {
+        if let Some(UnitySceneObject::Transform(transform)) = parsed.0.get(&963194228i64) {
             assert_eq!(transform.rotation.x, 0.35355338);
             assert_eq!(transform.rotation.y, 0.35355338);
             assert_eq!(transform.rotation.z, -0.1464466);

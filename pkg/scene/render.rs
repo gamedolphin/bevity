@@ -10,6 +10,10 @@ pub struct UnityRenderSettings {
 
     #[serde(alias = "m_AmbientSkyColor")]
     pub ambient_sky_color: UnityColor,
+    #[serde(alias = "m_AmbientEquatorColor")]
+    pub ambient_equator_color: UnityColor,
+    #[serde(alias = "m_AmbientGroundColor")]
+    pub ambient_ground_color: UnityColor,
     #[serde(alias = "m_AmbientIntensity")]
     pub ambient_intensity: f32,
 

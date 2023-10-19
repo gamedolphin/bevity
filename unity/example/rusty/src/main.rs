@@ -1,3 +1,4 @@
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use std::f32::consts::TAU;
 
 use bevity::BevityPlugin;
@@ -12,6 +13,7 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, BevityPlugin::<BevityExported>::default()))
         .add_systems(Update, rotate_cube)
+        .add_plugins(WorldInspectorPlugin::new())
         .run();
 }
 

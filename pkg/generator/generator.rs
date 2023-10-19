@@ -23,7 +23,7 @@ pub fn inbuilt_component_list(item: TokenStream) -> TokenStream {
         quote! {
             #[derive(bevy::prelude::Component, Debug, Clone)]
             pub struct #meta_struct_name {
-                pub object_id: u64,
+                pub object_id: i64,
             }
 
             #[derive(bevy::prelude::Component)]
@@ -72,7 +72,7 @@ pub fn inbuilt_component_list(item: TokenStream) -> TokenStream {
         }
 
         impl<T> UnitySceneObject<T> {
-            pub fn spawn_meta(&self, object_id: u64, commands: &mut bevy::ecs::system::EntityCommands) {
+            pub fn spawn_meta(&self, object_id: i64, commands: &mut bevy::ecs::system::EntityCommands) {
                 match self {
                     UnitySceneObject::MonoBehaviour(T) => {},
                     UnitySceneObject::DontCare => {},
@@ -111,7 +111,7 @@ pub fn exported_component_list(item: TokenStream) -> TokenStream {
         quote! {
             #[derive(Component, Debug, Clone)]
             pub struct #meta_struct_name {
-                pub object_id: u64,
+                pub object_id: i64,
             }
 
             #[derive(Component)]
@@ -194,7 +194,7 @@ pub fn exported_component_list(item: TokenStream) -> TokenStream {
         }
 
         impl bevity::MonoBehaviour for BevityExported {
-            fn add_component_to_entity(&self, object_id: u64, cmd: &mut bevy::ecs::system::EntityCommands) {
+            fn add_component_to_entity(&self, object_id: i64, cmd: &mut bevy::ecs::system::EntityCommands) {
                 match self {
                     #(#add_components)*
 

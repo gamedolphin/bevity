@@ -6,7 +6,7 @@ use serde::{
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct FileReference {
     #[serde(alias = "fileID")]
-    pub file_id: u64,
+    pub file_id: i64,
     #[serde(default, deserialize_with = "deserialize_option_string_or_float")]
     pub guid: Option<String>,
 }

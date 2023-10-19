@@ -3,20 +3,31 @@ use std::sync::{
     Arc,
 };
 
-use bevity_scene::{MonoBehaviour, UnityChangeObject, UnityEntityMap, UnityTransformDirty};
-use bevy::prelude::*;
+use bevity_scene::{MonoBehaviour, ObjectLocalFileId, UnityChangeObject, UnityTransformDirty};
+use bevy::{prelude::*, utils::HashMap};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ChangeObject {
-    pub object_id: u64,
+    pub object_id: i64,
     pub serialized: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct IdResponse {
+    pub object_id: i64,
+    pub actual_id: i64,
 }
 
 #[derive(Resource)]
 pub struct UnityStdin {
     pub receiver: Arc<Mutex<Receiver<String>>>,
+}
+
+#[derive(Resource, Default)]
+pub struct UnityEntityMap {
+    pub object_map: HashMap<i64, Entity>,
 }
 
 pub(crate) fn setup_stdin<
@@ -29,7 +40,30 @@ pub(crate) fn setup_stdin<
     app.insert_resource(UnityStdin {
         receiver: Arc::new(Mutex::new(receiver)),
     })
+    .insert_resource(UnityEntityMap::default())
+    .add_systems(PreUpdate, send_unknown_gameobjects)
     .add_systems(PreUpdate, listen_stdin::<T>);
+}
+
+#[derive(Component)]
+pub(crate) struct UnityTrackingRequested;
+
+#[derive(Component)]
+pub(crate) struct UnityTracked {
+    object_id: i64,
+}
+
+#[allow(clippy::type_complexity)]
+fn send_unknown_gameobjects(
+    query: Query<
+        (Entity, &ObjectLocalFileId),
+        (Without<UnityTrackingRequested>, Without<UnityTracked>),
+    >,
+    mut commands: Commands,
+) {
+    for (entity, _) in &query {
+        commands.entity(entity).insert(UnityTrackingRequested);
+    }
 }
 
 fn spawn_stdin_channel() -> Receiver<String> {
@@ -44,10 +78,10 @@ fn spawn_stdin_channel() -> Receiver<String> {
 
 fn listen_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(world: &mut World) {
     world.resource_scope(|world2, unity_stdin: Mut<UnityStdin>| {
-        world2.resource_scope(|world3, unity_map: Mut<UnityEntityMap>| {
+        world2.resource_scope(|world3, mut unity_map: Mut<UnityEntityMap>| {
             let receiver = unity_stdin.receiver.lock();
             match receiver.try_recv() {
-                Ok(key) => handle_stdin::<T>(key, &unity_map, world3),
+                Ok(key) => handle_stdin::<T>(key, &mut unity_map, world3),
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {}
             }
@@ -57,7 +91,7 @@ fn listen_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(world: &mut Worl
 
 fn handle_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(
     instruction: String,
-    unity_map: &UnityEntityMap,
+    unity_map: &mut UnityEntityMap,
     world: &mut World,
 ) {
     let splits: Vec<&str> = instruction.split('|').collect();
@@ -89,10 +123,21 @@ fn handle_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(
     match kind {
         0 => handle_incoming_update::<T>(instruction, unity_map, world),
         1 => {}
+        2 => handle_incoming_ids(instruction, unity_map),
         _ => {
             tracing::warn!("unsupported kind value: {}", kind);
         }
     }
+}
+
+fn handle_incoming_ids(instruction: &str, unity_map: &mut UnityEntityMap) {
+    let ids = match serde_json::from_str::<Vec<IdResponse>>(instruction) {
+        Ok(ids) => ids,
+        Err(e) => {
+            tracing::error!("failed to parse id response: {}", e);
+            return;
+        }
+    };
 }
 
 fn handle_incoming_update<T: serde::de::DeserializeOwned + MonoBehaviour>(
@@ -109,7 +154,10 @@ fn handle_incoming_update<T: serde::de::DeserializeOwned + MonoBehaviour>(
     };
 
     instructions.iter().for_each(|f| {
-        let entity = unity_map.object_map.get(&f.object_id).unwrap();
+        let Some(entity) = unity_map.object_map.get(&f.object_id) else {
+            tracing::error!("got an unknown object_id: {}", f.object_id);
+            return;
+        };
 
         let mut e = world.entity_mut(*entity);
         // println!("received instruction: {} for {:?}", f.serialized, entity);

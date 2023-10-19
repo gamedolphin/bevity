@@ -10,6 +10,7 @@ public class UnityAssetLister : AssetPostprocessor
     {
         ProcessMaterials();
         ProcessTextures();
+        ProcessAllAssets();
     }
 
     private static void ProcessMaterials()
@@ -22,7 +23,9 @@ public class UnityAssetLister : AssetPostprocessor
         }
 
         var output = JsonConvert.SerializeObject(json);
-        File.WriteAllText(Path.Combine(Application.dataPath, "materials.json"), output);
+        var cargoPath = Path.Combine(Application.dataPath, BevitySettings.Instance.CargoToml);
+        var workingDirectory = Path.GetDirectoryName(cargoPath);
+        File.WriteAllText(Path.Combine(workingDirectory, "materials.json"), output);
     }
 
     private static void ProcessTextures()
@@ -35,6 +38,36 @@ public class UnityAssetLister : AssetPostprocessor
         }
 
         var output = JsonConvert.SerializeObject(json);
-        File.WriteAllText(Path.Combine(Application.dataPath, "textures.json"), output);
+        var cargoPath = Path.Combine(Application.dataPath, BevitySettings.Instance.CargoToml);
+        var workingDirectory = Path.GetDirectoryName(cargoPath);
+        File.WriteAllText(Path.Combine(workingDirectory, "textures.json"), output);
     }
+
+    private static void ProcessAllAssets()
+    {
+        var guids = AssetDatabase.FindAssets("", new[] { "Assets/Models", "Assets/Textures", "Assets/Materials", "Assets/Prefabs" });
+        var json = new Dictionary<string, string>();
+        foreach (string guid in guids)
+        {
+            json.Add(guid, AssetDatabase.GUIDToAssetPath(guid));
+        }
+
+        var output = JsonConvert.SerializeObject(json);
+        var cargoPath = Path.Combine(Application.dataPath, BevitySettings.Instance.CargoToml);
+        var workingDirectory = Path.GetDirectoryName(cargoPath);
+        File.WriteAllText(Path.Combine(workingDirectory, "all.json"), output);
+    }
+
+    // private static void ProcessModels()
+    // {
+    //     var guids = AssetDatabase.FindAssets("t:", new[] { "Assets/Textures" });
+    //     var json = new Dictionary<string, string>();
+    //     foreach (string guid in guids)
+    //     {
+    //         json.Add(guid, AssetDatabase.GUIDToAssetPath(guid));
+    //     }
+
+    //     var output = JsonConvert.SerializeObject(json);
+    //     File.WriteAllText(Path.Combine(Application.dataPath, "textures.json"), output);
+    // }
 }

@@ -16,14 +16,14 @@ pub fn get_assets_dir() -> PathBuf {
     }
 }
 
-pub fn parse_unity_yaml_file<T: DeserializeOwned>(file_path: &str) -> Result<HashMap<u64, T>> {
+pub fn parse_unity_yaml_file<T: DeserializeOwned>(file_path: &str) -> Result<HashMap<i64, T>> {
     let file = std::fs::read_to_string(file_path)?;
     parse_unity_yaml(&file)
 }
 
-pub fn parse_unity_yaml<T: DeserializeOwned>(file: &str) -> Result<HashMap<u64, T>> {
+pub fn parse_unity_yaml<T: DeserializeOwned>(file: &str) -> Result<HashMap<i64, T>> {
     let file = cleanup_unity_yaml(file)?;
-    let parse: HashMap<u64, T> = serde_yaml::from_str(&file)?;
+    let parse: HashMap<i64, T> = serde_yaml::from_str(&file)?;
 
     Ok(parse)
 }
@@ -39,7 +39,7 @@ fn cleanup_unity_yaml(yaml: &str) -> Result<String> {
                 // unity object id declared on this line
                 // --- !u!104 &2 => 104 is object type and 2 is object id
                 let mut splits = line.split_whitespace();
-                let object_id: u64 = splits
+                let object_id: i64 = splits
                     .find(|&part| part.starts_with('&'))
                     .and_then(|num| num[1..].parse().ok())?;
 

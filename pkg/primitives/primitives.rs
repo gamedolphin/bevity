@@ -5,6 +5,7 @@ mod light;
 mod materials;
 mod math;
 mod mesh;
+mod prefabs;
 mod reference;
 mod transform;
 
@@ -15,5 +16,6 @@ pub use light::*;
 pub use materials::*;
 pub use math::*;
 pub use mesh::*;
+pub use prefabs::*;
 pub use reference::*;
 pub use transform::*;

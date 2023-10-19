@@ -52,6 +52,8 @@ impl<T: Clone + Sync + Send + Default + DeserializeOwned + Serialize + 'static +
 
         stdin::setup_stdin::<T>(app);
         stdout::setup_stdout::<T>(app);
+
+        println!("setup editor watch!");
     }
 }
 

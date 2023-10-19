@@ -359,6 +359,7 @@ dependencies = [
  "bevity-primitives",
  "bevity-yaml",
  "bevy",
+ "bevy_atmosphere",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -472,6 +473,30 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "bevy_atmosphere"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72e824a9e417cea4dabece5214f621fed36c8e916790924fcd6054a3ca5342a3"
+dependencies = [
+ "bevy",
+ "bevy_atmosphere_macros",
+ "cfg-if",
+]
+
+[[package]]
+name = "bevy_atmosphere_macros"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ec647b6d64306efddf366911786e7a6150e6a97603dd7380d62f81768f2a3f1"
+dependencies = [
+ "bevy_macro_utils",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
 ]
 
 [[package]]

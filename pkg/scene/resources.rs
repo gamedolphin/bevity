@@ -7,8 +7,6 @@ use anyhow::Result;
 use bevity_primitives::UnityMaterial;
 use bevy::prelude::*;
 
-use bevity_yaml::get_assets_dir;
-
 #[derive(Default)]
 pub struct ResourcesPlugin;
 
@@ -17,16 +15,19 @@ pub struct UnityResource {
     pub base_path: PathBuf,
     pub textures: HashMap<String, Handle<Image>>,
     pub standard_materials: HashMap<String, Handle<StandardMaterial>>,
+    pub models: HashMap<String, Handle<Scene>>,
 
     pub meshes: HashMap<String, Handle<Mesh>>,
 
     pub materials_map: HashMap<String, UnityMaterial>,
     pub textures_map: HashMap<String, String>,
+
+    pub all_map: HashMap<String, String>,
 }
 
 impl Plugin for ResourcesPlugin {
     fn build(&self, app: &mut App) {
-        let path = get_assets_dir();
+        let path = std::env::current_dir().unwrap();
         let path = Path::new(&path);
         let materials_json = path.join("materials.json");
 
@@ -39,8 +40,14 @@ impl Plugin for ResourcesPlugin {
         };
 
         let textures_json = path.join("textures.json");
-        let Ok(textures_map) = read_texture_map(&textures_json) else {
+        let Ok(textures_map) = read_guid_path_map(&textures_json) else {
             tracing::error!("failed to parse texture json");
+            return;
+        };
+
+        let all_json = path.join("all.json");
+        let Ok(all_map) = read_guid_path_map(&all_json) else {
+            tracing::error!("failed to parse all json");
             return;
         };
 
@@ -48,6 +55,7 @@ impl Plugin for ResourcesPlugin {
             base_path: path.into(),
             materials_map: materials,
             textures_map,
+            all_map,
             ..default()
         })
         .add_systems(
@@ -60,7 +68,7 @@ impl Plugin for ResourcesPlugin {
     }
 }
 
-fn read_texture_map(path: &Path) -> Result<HashMap<String, String>> {
+fn read_guid_path_map(path: &Path) -> Result<HashMap<String, String>> {
     let file = std::fs::read_to_string(path)?;
     let texture_pathmap: HashMap<String, String> = serde_json::from_str(&file)?;
 
