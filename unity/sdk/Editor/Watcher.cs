@@ -31,7 +31,6 @@ public static class Watcher
     private static Dictionary<ulong, string> incomingChanges = new Dictionary<ulong, string>();
     private static Dictionary<ulong, string> oldValues = new Dictionary<ulong, string>();
     private static Dictionary<ulong, int> pendingChanges = new Dictionary<ulong, int>();
-    private static HashSet<ulong> untracked = new HashSet<ulong>();
 
     private static StreamWriter stdin = null;
     private static RuntimeWatcher runtimeWatcher;
@@ -106,13 +105,6 @@ public static class Watcher
                         }
                     }
                     break;
-                case 4:
-                    var wanted = JsonConvert.DeserializeObject<ulong[]>(data);
-                    foreach (var un in wanted)
-                    {
-                        untracked.Add(un);
-                    }
-                    break;
             }
         }
 
@@ -162,6 +154,7 @@ public static class Watcher
             else if (goOrComponent is Component component)
             {
                 var componentId = GlobalObjectId.GetGlobalObjectIdSlow(component).targetObjectId;
+                Debug.Log($"Got global object id of component: {GlobalObjectId.GetGlobalObjectIdSlow(component)}");
                 string serialized;
                 if (oldValues.TryGetValue(componentId, out var comp))
                 {
@@ -174,6 +167,7 @@ public static class Watcher
                 }
 
                 changeList.Add(new ChangeObject { object_id = GlobalObjectId.GetGlobalObjectIdSlow(component.gameObject).targetObjectId, serialized = serialized });
+                Debug.Log($"Got global object id of gameobject: {GlobalObjectId.GetGlobalObjectIdSlow(component.gameObject)}");
                 if (pendingChanges.TryGetValue(componentId, out var count))
                 {
                     pendingChanges[componentId] = count + 1;
@@ -192,18 +186,6 @@ public static class Watcher
             if (stdin != null)
             {
                 stdin.WriteLine(output);
-            }
-        }
-
-        if (untracked.Count > 0)
-        {
-            var activeScene = SceneManager.GetActiveScene().path;
-            var guid = AssetDatabase.AssetPathToGUID(activeScene);
-            foreach (var un in untracked)
-            {
-                var globalObjectId = new GlobalObjectId();
-                GlobalObjectId.TryParse($"GlobalObjectId_V1-2-{guid}-{un}-0", out globalObjectId);
-                var instanceId = GlobalObjectId.GlobalObjectIdentifierToInstanceIDSlow(globalObjectId);
             }
         }
 

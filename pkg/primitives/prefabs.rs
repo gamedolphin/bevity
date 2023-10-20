@@ -45,42 +45,74 @@ impl PropertyOption {
     }
 }
 
-pub fn get_transform_for_prefab(prefab: &UnityPrefabInstance) -> UnityTransform {
-    let mut transform = UnityTransform::default();
-    prefab
-        .modification
-        .modifications
-        .iter()
-        .for_each(|m| match m.path.as_str() {
-            "m_LocalPosition.x" => {
-                transform.position.x = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalPosition.y" => {
-                transform.position.y = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalPosition.z" => {
-                transform.position.z = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalRotation.x" => {
-                transform.rotation.x = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalRotation.y" => {
-                transform.rotation.y = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalRotation.z" => {
-                transform.rotation.z = m.value.get_number().unwrap_or_default();
-            }
-            "m_LocalScale.x" => {
-                transform.scale.x = m.value.get_number().unwrap_or(1.0);
-            }
-            "m_LocalScale.y" => {
-                transform.scale.y = m.value.get_number().unwrap_or(1.0);
-            }
-            "m_LocalScale.z" => {
-                transform.scale.z = m.value.get_number().unwrap_or(1.0);
-            }
-            _ => {}
-        });
+impl UnityPrefabInstance {
+    pub fn get_local_id(&self, object_id: i64) -> i64 {
+        let gameobject_id = self
+            .modification
+            .modifications
+            .iter()
+            .find_map(|m| match m.path.as_str() {
+                "m_Name" => Some(m.target.file_id),
+                _ => None,
+            })
+            .unwrap();
+        // https://uninomicon.com/globalobjectid
+        (object_id ^ gameobject_id) & 0x7fffffffffffffff
+    }
 
-    transform
+    pub fn get_transform_id(&self, object_id: i64) -> i64 {
+        let transform_id = self
+            .modification
+            .modifications
+            .iter()
+            .find_map(|m| match m.path.as_str() {
+                "m_LocalPosition.x" => Some(m.target.file_id),
+                _ => None,
+            })
+            .unwrap();
+
+        (object_id ^ transform_id) & 0x7fffffffffffffff
+    }
+
+    pub fn get_transform_for_prefab(&self) -> UnityTransform {
+        let mut transform = UnityTransform::default();
+        self.modification
+            .modifications
+            .iter()
+            .for_each(|m| match m.path.as_str() {
+                "m_LocalPosition.x" => {
+                    transform.position.x = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalPosition.y" => {
+                    transform.position.y = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalPosition.z" => {
+                    transform.position.z = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalRotation.x" => {
+                    transform.rotation.x = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalRotation.y" => {
+                    transform.rotation.y = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalRotation.z" => {
+                    transform.rotation.z = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalRotation.w" => {
+                    transform.rotation.w = m.value.get_number().unwrap_or_default();
+                }
+                "m_LocalScale.x" => {
+                    transform.scale.x = m.value.get_number().unwrap_or(1.0);
+                }
+                "m_LocalScale.y" => {
+                    transform.scale.y = m.value.get_number().unwrap_or(1.0);
+                }
+                "m_LocalScale.z" => {
+                    transform.scale.z = m.value.get_number().unwrap_or(1.0);
+                }
+                _ => {}
+            });
+
+        transform
+    }
 }

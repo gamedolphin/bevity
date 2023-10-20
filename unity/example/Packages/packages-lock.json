@@ -1,16 +1,15 @@
 {
   "dependencies": {
     "com.atteneder.gltfast": {
-      "version": "5.2.0",
+      "version": "file:com.atteneder.gltfast@5.2.0",
       "depth": 0,
-      "source": "registry",
+      "source": "embedded",
       "dependencies": {
         "com.unity.modules.jsonserialize": "1.0.0",
         "com.unity.modules.unitywebrequest": "1.0.0",
         "com.unity.mathematics": "1.2.6",
         "com.unity.burst": "1.6.6"
-      },
-      "url": "https://package.openupm.com"
+      }
     },
     "com.unity.burst": {
       "version": "1.8.4",

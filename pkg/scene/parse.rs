@@ -7,25 +7,31 @@ use crate::objects::UnitySceneObject;
 use crate::UnityRenderSettings;
 
 #[derive(Default, Clone)]
-pub struct UnityScene<T>(pub HashMap<i64, UnitySceneObject<T>>);
+pub struct UnityScene<T>(pub String, pub HashMap<i64, UnitySceneObject<T>>);
 
 impl<T> UnityScene<T> {
     pub fn get_render_settings(&self) -> Option<&UnityRenderSettings> {
-        self.0.iter().find_map(|(_, c)| match c {
+        self.1.iter().find_map(|(_, c)| match c {
             UnitySceneObject::RenderSettings(r) => Some(r),
             _ => None,
         })
     }
 }
 
-pub fn parse_scene_file<T: serde::de::DeserializeOwned>(file: &str) -> Result<UnityScene<T>> {
+pub fn parse_scene_file<T: serde::de::DeserializeOwned>(
+    guid: &str,
+    file: &str,
+) -> Result<UnityScene<T>> {
     let parsed = parse_unity_yaml_file(file)?;
-    Ok(UnityScene(parsed))
+    Ok(UnityScene(guid.to_string(), parsed))
 }
 
-pub fn parse_scene<T: serde::de::DeserializeOwned>(scene: &str) -> Result<UnityScene<T>> {
+pub fn parse_scene<T: serde::de::DeserializeOwned>(
+    guid: &str,
+    scene: &str,
+) -> Result<UnityScene<T>> {
     let parsed = parse_unity_yaml(scene)?;
-    Ok(UnityScene(parsed))
+    Ok(UnityScene(guid.to_string(), parsed))
 }
 
 #[cfg(test)]
@@ -61,11 +67,11 @@ MeshFilter:
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 "#;
 
-        let parsed = parse_scene::<()>(yaml_input)?;
+        let parsed = parse_scene::<()>("", yaml_input)?;
 
-        assert!(parsed.0.contains_key(&963194228i64));
+        assert!(parsed.1.contains_key(&963194228i64));
 
-        if let Some(UnitySceneObject::Transform(transform)) = parsed.0.get(&963194228i64) {
+        if let Some(UnitySceneObject::Transform(transform)) = parsed.1.get(&963194228i64) {
             assert_eq!(transform.rotation.x, 0.35355338);
             assert_eq!(transform.rotation.y, 0.35355338);
             assert_eq!(transform.rotation.z, -0.1464466);
@@ -80,9 +86,9 @@ MeshFilter:
             bail!("Expected a Transform object")
         }
 
-        assert!(parsed.0.contains_key(&1908984289));
+        assert!(parsed.1.contains_key(&1908984289));
 
-        if let Some(UnitySceneObject::MeshFilter(m)) = parsed.0.get(&1908984289) {
+        if let Some(UnitySceneObject::MeshFilter(m)) = parsed.1.get(&1908984289) {
             assert_eq!(m.mesh.file_id, 10202);
             assert_eq!(m.mesh.guid, None);
         } else {
@@ -103,7 +109,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
 "#;
 
-        let _ = parse_scene::<()>(yaml_input);
+        let _ = parse_scene::<()>("", yaml_input);
 
         Ok(())
     }

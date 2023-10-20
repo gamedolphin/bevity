@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use bevity_primitives::UnityMaterial;
-use bevy::prelude::*;
+use bevy::{gltf::Gltf, prelude::*};
 
 #[derive(Default)]
 pub struct ResourcesPlugin;
@@ -15,6 +15,7 @@ pub struct UnityResource {
     pub base_path: PathBuf,
     pub textures: HashMap<String, Handle<Image>>,
     pub standard_materials: HashMap<String, Handle<StandardMaterial>>,
+    pub gltfs: HashMap<String, Handle<Gltf>>,
     pub models: HashMap<String, Handle<Scene>>,
 
     pub meshes: HashMap<String, Handle<Mesh>>,

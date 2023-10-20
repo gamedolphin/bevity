@@ -1,9 +1,10 @@
 use bevity_primitives::{
-    get_transform_for_prefab, load_camera_skybox_system, FileReference, UnityMeshFilterExtra,
-    UnityMeshRendererExtra, UnityMeshRequiresLoad, UnityPrefabInstance, UnityTransform,
+    load_camera_skybox_system, FileReference, UnityMeshFilterExtra, UnityMeshRendererExtra,
+    UnityMeshRequiresLoad, UnityPrefabInstance,
 };
 use bevy::{
     ecs::{system::EntityCommands, world::EntityMut},
+    gltf::GltfNode,
     prelude::*,
     utils::HashMap,
 };
@@ -22,9 +23,10 @@ pub struct SceneResource<T> {
     pub current: Option<String>,
 }
 
-#[derive(Component)]
-pub struct ObjectLocalFileId {
-    pub object_id: i64,
+#[derive(Resource, Default)]
+pub struct UnityEntityMap {
+    pub object_map: HashMap<i64, Entity>,
+    pub guid_map: HashMap<String, Entity>,
 }
 
 pub trait MonoBehaviour {
@@ -40,8 +42,16 @@ impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBeha
 
         app.insert_resource::<SceneResource<T>>(SceneResource::default())
             .add_plugins(ResourcesPlugin)
+            .insert_resource(UnityEntityMap::default())
             .add_systems(Update, load_scene_if_changed::<T>)
-            .add_systems(Update, (load_camera_skybox_system, load_unity_mesh_system));
+            .add_systems(
+                Update,
+                (
+                    load_camera_skybox_system,
+                    load_unity_mesh_system,
+                    fix_gltf_mesh,
+                ),
+            );
     }
 }
 
@@ -56,6 +66,7 @@ fn load_scene_if_changed<T: Sync + Send + MonoBehaviour + 'static>(
     mut local: Local<LocalSceneConfig>,
     commands: Commands,
     asset_server: Res<AssetServer>,
+    mut entity_map: ResMut<UnityEntityMap>,
 ) {
     let Some(current) = &scene.current else {
         return;
@@ -75,7 +86,13 @@ fn load_scene_if_changed<T: Sync + Send + MonoBehaviour + 'static>(
         return;
     };
 
-    load_scene(current_scene, commands, &mut unity_res, &asset_server);
+    load_scene(
+        current_scene,
+        commands,
+        &mut unity_res,
+        &asset_server,
+        &mut entity_map,
+    );
 
     local.current_loaded = Some(current.clone());
 }
@@ -85,30 +102,30 @@ fn load_scene<T>(
     mut commands: Commands,
     unity_res: &mut ResMut<UnityResource>,
     asset_server: &Res<AssetServer>,
+    entity_map: &mut UnityEntityMap,
 ) where
     T: MonoBehaviour,
 {
     let render_settings = scene.get_render_settings();
 
-    let mut object_map: HashMap<i64, Entity> = HashMap::new();
     let mut transform_map: HashMap<i64, Entity> = HashMap::new();
 
     if let Some(render_settings) = render_settings {
         commands.insert_resource(AmbientLight {
-            color: render_settings.ambient_sky_color.into(),
+            color: render_settings.indirect_specular_color.into(),
             brightness: render_settings.ambient_intensity,
         });
     }
 
     scene
-        .0
+        .1
         .iter()
         .filter_map(|(id, g)| match g {
             UnitySceneObject::GameObject(g) => Some((id, g)),
             _ => None,
         })
         .for_each(|(id, game_object)| {
-            let Some((comp_id, transform)) = get_transform(game_object, &scene.0) else {
+            let Some((comp_id, transform)) = get_transform(game_object, &scene.1) else {
                 // some gameobject without a transform??
                 tracing::error!(
                     "found game object without a transform: {}",
@@ -120,7 +137,6 @@ fn load_scene<T>(
             let local = transform.into();
 
             let mut entity = commands.spawn(TransformBundle { local, ..default() });
-            entity.insert(ObjectLocalFileId { object_id: *id });
             entity.insert(UnityTransformMeta { object_id: comp_id });
             entity.insert(VisibilityBundle {
                 visibility: if game_object.is_active() {
@@ -135,7 +151,7 @@ fn load_scene<T>(
                 .components
                 .iter()
                 .filter_map(|c| {
-                    let comp = scene.0.get(&c.component.file_id)?;
+                    let comp = scene.1.get(&c.component.file_id)?;
                     Some((c.component.file_id, comp))
                 })
                 .for_each(|(object_id, comp)| {
@@ -149,60 +165,48 @@ fn load_scene<T>(
                     );
                 });
 
-            object_map.insert(*id, entity.id());
+            let guid = format!("GlobalObjectId_V1-2-{}-{}-0", &scene.0, *id);
+
+            entity_map.object_map.insert(*id, entity.id());
+            entity_map.guid_map.insert(guid, entity.id());
             transform_map.insert(comp_id, entity.id());
         });
 
-    let prefab_transforms: HashMap<i64, (&i64, &UnityTransform)> = scene
-        .0
-        .iter()
-        .filter_map(|(id, trx)| match trx {
-            UnitySceneObject::Transform(t) => {
-                if t.prefab_instance.file_id != 0 {
-                    Some((t.prefab_instance.file_id, (id, t)))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        })
-        .fold(HashMap::new(), |mut acc, (id, t)| {
-            acc.insert(id, t);
-
-            acc
-        });
-
     scene
-        .0
+        .1
         .iter()
         .filter_map(|(id, game_object)| match game_object {
             UnitySceneObject::PrefabInstance(p) => Some((id, p)),
             _ => None,
         })
         .for_each(|(id, prefab)| {
-            let local = get_transform_for_prefab(prefab).into();
+            let local = prefab.get_transform_for_prefab().into();
             let mut entity = commands.spawn((TransformBundle { local, ..default() },));
-            entity.insert(ObjectLocalFileId { object_id: *id });
 
-            spawn_prefab(prefab, &mut entity, local, unity_res, asset_server);
-            object_map.insert(*id, entity.id());
+            spawn_prefab(prefab, local, &mut entity, unity_res, asset_server);
 
-            let Some((transform_id, _)) = prefab_transforms.get(id) else {
-                tracing::warn!("failed to get a transform for {}", id);
-                return;
-            };
+            let file_id = prefab.get_local_id(*id);
+
+            println!("creating prefab: {}", file_id);
+
+            let guid = format!("GlobalObjectId_V1-2-{}-{}-0", &scene.0, file_id);
+            entity_map.guid_map.insert(guid, entity.id());
+            entity_map.object_map.insert(file_id, entity.id());
+
+            let transform_id = prefab.get_transform_id(*id);
+            // println!("creating transform id: {}", transform_id);
             entity.insert(UnityTransformMeta {
-                object_id: **transform_id,
+                object_id: transform_id,
             });
-            transform_map.insert(**transform_id, entity.id());
+            transform_map.insert(transform_id, entity.id());
         });
 
     scene
-        .0
+        .1
         .iter()
         .filter_map(|(id, game_object)| match game_object {
             UnitySceneObject::GameObject(g) => {
-                if let Some((_, transform)) = get_transform(g, &scene.0) {
+                if let Some((_, transform)) = get_transform(g, &scene.1) {
                     return Some((id, transform));
                 };
 
@@ -211,7 +215,7 @@ fn load_scene<T>(
             _ => None,
         })
         .filter_map(|(gameobject_id, transform)| {
-            let parent = object_map.get(gameobject_id)?;
+            let parent = entity_map.object_map.get(gameobject_id)?;
             Some((parent, transform))
         })
         .for_each(|(parent, transform)| {
@@ -227,8 +231,8 @@ fn load_scene<T>(
 
 fn spawn_prefab(
     prefab: &UnityPrefabInstance,
-    cmd: &mut EntityCommands,
     transform: Transform,
+    cmd: &mut EntityCommands,
     res: &mut ResMut<UnityResource>,
     asset_server: &Res<AssetServer>,
 ) {
@@ -242,44 +246,131 @@ fn spawn_prefab(
         return;
     };
 
-    if referenced_prefab.ends_with(".glb") {
-        spawn_gltf(
+    if referenced_prefab.ends_with(".glb") || referenced_prefab.ends_with(".gltf") {
+        instantiate_gltf(
             guid,
             &referenced_prefab.clone(),
-            cmd,
             transform,
+            cmd,
             res,
             asset_server,
+            true,
         );
     }
 }
 
-fn spawn_gltf(
+// fn fixup_gltf(
+//     mut ev_asset: EventReader<AssetEvent<GltfNode>>,
+//     mut assets: ResMut<Assets<GltfNode>>,
+// ) {
+//     for ev in ev_asset.iter() {
+//         match ev {
+//             AssetEvent::Created { handle } => {
+//                 let node = assets.get_mut(handle).unwrap();
+//                 // ^ unwrap is OK, because we know it is loaded now
+
+//                 node.transform
+//                     .rotate_axis(Vec3::AXES[2], std::f32::consts::PI);
+//             }
+//             _ => {}
+//         }
+//     }
+// }
+
+fn instantiate_gltf(
     guid: &str,
     path: &str,
-    cmd: &mut EntityCommands,
     transform: Transform,
+    cmd: &mut EntityCommands,
     res: &mut ResMut<UnityResource>,
     asset_server: &Res<AssetServer>,
+    add_fixup: bool,
 ) {
-    let scene = if let Some(model) = res.models.get(guid) {
-        model.clone()
+    let scene = if let Some(scene) = res.models.get(guid) {
+        scene.clone()
     } else {
         let path = res.base_path.join("..").join(path);
         let path = format!("{}#Scene0", path.to_string_lossy());
-        tracing::info!("loading {} at {:?}", path, transform);
         let handle = asset_server.load(path);
         res.models.insert(guid.to_string(), handle.clone());
-
         handle
     };
 
+    let visibility = if add_fixup {
+        Visibility::Hidden
+    } else {
+        Visibility::Inherited
+    };
+
     cmd.insert(SceneBundle {
-        scene,
+        scene: scene.clone(),
         transform,
+        visibility,
         ..default()
     });
+
+    if add_fixup {
+        cmd.insert(FixGltfTransforms);
+    }
 }
+
+#[derive(Component)]
+struct FixGltfTransforms;
+
+fn fix_gltf_mesh(
+    query: Query<Entity, With<FixGltfTransforms>>,
+    children: Query<&Children>,
+    mut transforms: Query<&mut Transform, With<Handle<Mesh>>>,
+    mut commands: Commands,
+) {
+    for gltf_entity in &query {
+        let mut cmd = commands.entity(gltf_entity);
+
+        if children.iter_descendants(gltf_entity).count() == 0 {
+            // not loaded yet
+            continue;
+        }
+
+        for entity in children.iter_descendants(gltf_entity) {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                transform.rotate_axis(Vec3::AXES[1], std::f32::consts::PI);
+            }
+        }
+
+        println!("handling gltf model: {:?}", gltf_entity);
+        cmd.insert(VisibilityBundle {
+            visibility: Visibility::Inherited,
+            ..default()
+        });
+        cmd.remove::<FixGltfTransforms>();
+    }
+}
+
+// fn spawn_gltf(
+//     guid: &str,
+//     path: &str,
+//     transform: Transform,
+//     cmd: &mut EntityCommands,
+//     res: &mut ResMut<UnityResource>,
+//     asset_server: &Res<AssetServer>,
+// ) {
+//     let scene = if let Some(model) = res.models.get(guid) {
+//         model.clone()
+//     } else {
+//         let path = res.base_path.join("..").join(path);
+//         let path = format!("{}#Scene0", path.to_string_lossy());
+//         let handle = asset_server.load(path);
+//         res.models.insert(guid.to_string(), handle.clone());
+
+//         handle
+//     };
+
+//     cmd.insert(SceneBundle {
+//         scene,
+//         transform,
+//         ..default()
+//     });
+// }
 
 pub fn load_unity_mesh_system(
     meshes: Query<

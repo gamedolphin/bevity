@@ -1,0 +1,49 @@
+{
+    "name": "glTFast.Editor",
+    "rootNamespace": "GLTFast.Editor",
+    "references": [
+        "Unity.Mathematics",
+        "glTFast",
+        "glTFast.Export",
+        "UnityEngine.TestTools.Graphics",
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "com.unity.formats.gltf.validator.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "7.3.1",
+            "define": "USING_URP"
+        },
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "7.3.1",
+            "define": "USING_HDRP"
+        },
+        {
+            "name": "com.unity.testframework.graphics",
+            "expression": "7.7.0",
+            "define": "GLTFAST_RENDER_TEST"
+        },
+        {
+            "name": "com.unity.modules.animation",
+            "expression": "1.0.0",
+            "define": "UNITY_ANIMATION"
+        },
+        {
+            "name": "com.unity.formats.gltf.validator",
+            "expression": "",
+            "define": "GLTF_VALIDATOR"
+        }
+    ],
+    "noEngineReferences": false
+}

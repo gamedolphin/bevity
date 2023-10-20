@@ -1,0 +1,31 @@
+.report-item {
+    align-items: flex-start;
+    flex-direction: row;
+    min-width: 100px;
+}
+
+.report-message {
+    flex-shrink: 1;
+    flex-grow: 1;
+    white-space: normal;
+    padding-top: 2px;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    margin: 2px 4px;
+    flex-shrink: 0;
+}
+
+.warning {
+    background-image: resource('Icons/d_console.warnicon.png');
+}
+
+.info {
+    background-image: resource('Icons/d_console.infoicon.png');
+}
+
+.error {
+    background-image: resource('Icons/d_console.erroricon.png');
+}

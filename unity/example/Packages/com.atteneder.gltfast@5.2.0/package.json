@@ -1,0 +1,34 @@
+{
+  "name": "com.atteneder.gltfast",
+  "version": "5.2.0",
+  "displayName": "glTFast",
+  "description": "Use glTFast to import and export glTF 3D files efficiently at runtime or in the Editor",
+  "unity": "2019.4",
+  "keywords": [
+    "mesh",
+    "gltf",
+    "asset",
+    "format",
+    "draco",
+    "ktx",
+    "basis",
+    "universal",
+    "basisu"
+  ],
+  "author": {
+    "name": "Andreas Atteneder",
+    "email": "andreas.atteneder@gmail.com",
+    "url": "https://pixel.engineer"
+  },
+  "dependencies": {
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.unitywebrequest": "1.0.0",
+    "com.unity.mathematics": "1.2.6",
+    "com.unity.burst": "1.6.6"
+  },
+  "type": "library",
+  "unityRelease": "40f1",
+  "publishConfig": {
+    "registry": "https://package.openupm.com"
+  }
+}

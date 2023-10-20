@@ -11,6 +11,7 @@ pub use stdout::UnityChangeMap;
 
 BEVITY_CONST!(ENABLE_BEVITY_EDITOR);
 BEVITY_CONST!(BEVITY_EDITOR_SCENE);
+BEVITY_CONST!(BEVITY_EDITOR_SCENE_GUID);
 
 #[derive(Default)]
 pub struct EditorPlugin<T: DeserializeOwned + Clone + Sync + Send + Default + 'static>(
@@ -31,18 +32,23 @@ impl<T: Clone + Sync + Send + Default + DeserializeOwned + Serialize + 'static +
             return;
         }
 
+        let Some(scene_guid) = std::env::var_os(BEVITY_EDITOR_SCENE_GUID) else {
+            return;
+        };
+
         let Some(scene_path) = get_scene_path() else {
             tracing::error!("expected a scene path in bevy editor plugin, found None");
             return;
         };
 
-        let scene = match bevity_scene::parse_scene_file::<T>(&scene_path) {
-            Ok(scene) => scene,
-            Err(e) => {
-                tracing::error!("failed to parse unity scene: {:?}", e);
-                return;
-            }
-        };
+        let scene =
+            match bevity_scene::parse_scene_file::<T>(&scene_guid.to_string_lossy(), &scene_path) {
+                Ok(scene) => scene,
+                Err(e) => {
+                    tracing::error!("failed to parse unity scene: {:?}", e);
+                    return;
+                }
+            };
 
         app.insert_resource(EditorResource {
             current_scene_name: scene_path,

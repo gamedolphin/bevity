@@ -8,6 +8,7 @@ use serde::Serialize;
 pub use bevity_builder::build;
 pub use bevity_editor::UnityChangeMap;
 pub use bevity_editor::BEVITY_EDITOR_SCENE;
+pub use bevity_editor::BEVITY_EDITOR_SCENE_GUID;
 pub use bevity_editor::ENABLE_BEVITY_EDITOR;
 pub use bevity_generator::exported_component_list;
 pub use bevity_scene::MonoBehaviour;

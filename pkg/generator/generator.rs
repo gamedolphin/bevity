@@ -185,7 +185,7 @@ pub fn exported_component_list(item: TokenStream) -> TokenStream {
 
         impl Plugin for BevityExported {
             fn build(&self, app: &mut App) {
-                if std::env::var_os(bevity::ENABLE_BEVITY_EDITOR).is_none() {
+                if std::env::var_os(bevity::ENABLE_BEVITY_EDITOR).is_none() || std::env::var_os(bevity::BEVITY_EDITOR_SCENE_GUID).is_none() {
                     return;
                 }
 

@@ -3,7 +3,10 @@ use bevy::{
     core_pipeline::Skybox,
     ecs::system::EntityCommands,
     prelude::*,
-    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
+    render::{
+        camera::ScalingMode,
+        render_resource::{TextureViewDescriptor, TextureViewDimension},
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -42,8 +45,25 @@ impl UnityCamera {
         skybox: Option<&Handle<Image>>,
         commands: &mut EntityCommands,
     ) {
+        let projection = if self.orthographic == 1 {
+            Projection::Orthographic(OrthographicProjection {
+                near: self.near_clip_plane,
+                far: self.far_clip_plane,
+                scaling_mode: ScalingMode::WindowSize(self.orthographic_size * 3.0),
+                ..default()
+            })
+        } else {
+            Projection::Perspective(PerspectiveProjection {
+                fov: self.fov.to_radians(),
+                aspect_ratio: 1.0,
+                near: self.near_clip_plane,
+                far: self.far_clip_plane,
+            })
+        };
+
         commands.insert(Camera3dBundle {
             transform,
+            projection,
             ..default()
         });
 
@@ -63,10 +83,6 @@ pub fn load_camera_skybox_system(
     mut commands: Commands,
 ) {
     for (entity, mut meta) in &mut unity_cameras {
-        if meta.skybox_loaded {
-            continue;
-        }
-
         let Some(skybox) = &meta.skybox else {
             meta.skybox_loaded = true; // no skybox, shut this down
             continue;
@@ -92,7 +108,11 @@ pub fn load_camera_skybox_system(
 
         let mut commands = commands.entity(entity);
         commands.insert(Skybox(skybox.clone()));
+        commands.insert(EnvironmentMapLight {
+            diffuse_map: skybox.clone(),
+            specular_map: skybox.clone(),
+        });
 
-        meta.skybox_loaded = true;
+        commands.remove::<UnityCameraSkyboxCubemap>();
     }
 }

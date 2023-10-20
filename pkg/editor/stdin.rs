@@ -3,8 +3,8 @@ use std::sync::{
     Arc,
 };
 
-use bevity_scene::{MonoBehaviour, ObjectLocalFileId, UnityChangeObject, UnityTransformDirty};
-use bevy::{prelude::*, utils::HashMap};
+use bevity_scene::{MonoBehaviour, UnityChangeObject, UnityEntityMap, UnityTransformDirty};
+use bevy::prelude::*;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
@@ -14,20 +14,9 @@ pub struct ChangeObject {
     pub serialized: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct IdResponse {
-    pub object_id: i64,
-    pub actual_id: i64,
-}
-
 #[derive(Resource)]
 pub struct UnityStdin {
     pub receiver: Arc<Mutex<Receiver<String>>>,
-}
-
-#[derive(Resource, Default)]
-pub struct UnityEntityMap {
-    pub object_map: HashMap<i64, Entity>,
 }
 
 pub(crate) fn setup_stdin<
@@ -41,29 +30,7 @@ pub(crate) fn setup_stdin<
         receiver: Arc::new(Mutex::new(receiver)),
     })
     .insert_resource(UnityEntityMap::default())
-    .add_systems(PreUpdate, send_unknown_gameobjects)
     .add_systems(PreUpdate, listen_stdin::<T>);
-}
-
-#[derive(Component)]
-pub(crate) struct UnityTrackingRequested;
-
-#[derive(Component)]
-pub(crate) struct UnityTracked {
-    object_id: i64,
-}
-
-#[allow(clippy::type_complexity)]
-fn send_unknown_gameobjects(
-    query: Query<
-        (Entity, &ObjectLocalFileId),
-        (Without<UnityTrackingRequested>, Without<UnityTracked>),
-    >,
-    mut commands: Commands,
-) {
-    for (entity, _) in &query {
-        commands.entity(entity).insert(UnityTrackingRequested);
-    }
 }
 
 fn spawn_stdin_channel() -> Receiver<String> {
@@ -123,21 +90,8 @@ fn handle_stdin<T: serde::de::DeserializeOwned + MonoBehaviour>(
     match kind {
         0 => handle_incoming_update::<T>(instruction, unity_map, world),
         1 => {}
-        2 => handle_incoming_ids(instruction, unity_map),
-        _ => {
-            tracing::warn!("unsupported kind value: {}", kind);
-        }
+        _ => {}
     }
-}
-
-fn handle_incoming_ids(instruction: &str, unity_map: &mut UnityEntityMap) {
-    let ids = match serde_json::from_str::<Vec<IdResponse>>(instruction) {
-        Ok(ids) => ids,
-        Err(e) => {
-            tracing::error!("failed to parse id response: {}", e);
-            return;
-        }
-    };
 }
 
 fn handle_incoming_update<T: serde::de::DeserializeOwned + MonoBehaviour>(

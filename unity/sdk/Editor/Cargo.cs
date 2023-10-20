@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using UnityEngine;
+using UnityEditor;
 using System.IO;
 
 public static class Cargo
@@ -16,6 +17,7 @@ public static class Cargo
         process.StartInfo.FileName = runCmd;
         process.StartInfo.Environment.Add("ENABLE_BEVITY_EDITOR", "");
         process.StartInfo.Environment.Add("BEVITY_EDITOR_SCENE", scenePath);
+        process.StartInfo.Environment.Add("BEVITY_EDITOR_SCENE_GUID", AssetDatabase.AssetPathToGUID(scenePath));
         process.StartInfo.Environment.Add("UNITY_ASSETS_PATH", Path.GetFullPath(Application.dataPath));
         process.StartInfo.Arguments = $"{args}";
 
