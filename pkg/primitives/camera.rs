@@ -2,6 +2,7 @@ use bevy::{
     asset::LoadState,
     core_pipeline::Skybox,
     ecs::system::EntityCommands,
+    pbr::ScreenSpaceAmbientOcclusionBundle,
     prelude::*,
     render::{
         camera::ScalingMode,
@@ -61,11 +62,14 @@ impl UnityCamera {
             })
         };
 
-        commands.insert(Camera3dBundle {
-            transform,
-            projection,
-            ..default()
-        });
+        commands.insert((
+            Camera3dBundle {
+                transform,
+                projection,
+                ..default()
+            },
+            ScreenSpaceAmbientOcclusionBundle::default(),
+        ));
 
         if skybox.is_some() {
             commands.insert(UnityCameraSkyboxCubemap {

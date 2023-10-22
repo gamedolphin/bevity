@@ -46,18 +46,21 @@ impl PropertyOption {
 }
 
 impl UnityPrefabInstance {
-    pub fn get_local_id(&self, object_id: i64) -> i64 {
-        let gameobject_id = self
+    pub fn get_local_id_and_name(&self, object_id: i64) -> (i64, String) {
+        let (gameobject_id, name) = self
             .modification
             .modifications
             .iter()
             .find_map(|m| match m.path.as_str() {
-                "m_Name" => Some(m.target.file_id),
+                "m_Name" => match &m.value {
+                    PropertyOption::String(v) => Some((m.target.file_id, v.to_string())),
+                    _ => None,
+                },
                 _ => None,
             })
             .unwrap();
         // https://uninomicon.com/globalobjectid
-        (object_id ^ gameobject_id) & 0x7fffffffffffffff
+        ((object_id ^ gameobject_id) & 0x7fffffffffffffff, name)
     }
 
     pub fn get_transform_id(&self, object_id: i64) -> i64 {

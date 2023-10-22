@@ -37,7 +37,7 @@ impl UnityLight {
                 commands.insert(DirectionalLightBundle {
                     directional_light: DirectionalLight {
                         color: self.color.into(),
-                        // illuminance: self.intensity, // TODO: some function to convert
+                        illuminance: self.intensity * 40000.0, // TODO: some function to convert
                         shadows_enabled: self.shadows.shadow_type != 0,
                         ..default()
                     },

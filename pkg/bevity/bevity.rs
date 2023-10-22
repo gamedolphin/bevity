@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use bevity_editor::EditorPlugin;
 use bevity_scene::ScenePlugin;
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 use serde::Serialize;
 
 pub use bevity_builder::build;
@@ -34,6 +35,8 @@ impl<
     fn build(&self, app: &mut App) {
         app.add_plugins(ScenePlugin::<T>::default());
         app.add_plugins(EditorPlugin::<T>::default());
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
+        app.add_plugins(RapierDebugRenderPlugin::default());
         app.add_plugins(T::default());
         app.add_plugins(bevity_settings::SettingsPlugin);
     }

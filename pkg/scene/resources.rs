@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    marker::PhantomData,
     path::{Path, PathBuf},
 };
 
@@ -7,11 +8,13 @@ use anyhow::Result;
 use bevity_primitives::UnityMaterial;
 use bevy::{gltf::Gltf, prelude::*};
 
-#[derive(Default)]
-pub struct ResourcesPlugin;
+use crate::UnityScene;
 
-#[derive(Resource, Debug, Default)]
-pub struct UnityResource {
+#[derive(Default)]
+pub struct ResourcesPlugin<T>(PhantomData<T>);
+
+#[derive(Resource, Default)]
+pub struct UnityResource<T: Default> {
     pub base_path: PathBuf,
     pub textures: HashMap<String, Handle<Image>>,
     pub standard_materials: HashMap<String, Handle<StandardMaterial>>,
@@ -22,11 +25,12 @@ pub struct UnityResource {
 
     pub materials_map: HashMap<String, UnityMaterial>,
     pub textures_map: HashMap<String, String>,
+    pub prefabs: HashMap<String, UnityScene<T>>,
 
     pub all_map: HashMap<String, String>,
 }
 
-impl Plugin for ResourcesPlugin {
+impl<T: Sync + Send + 'static + Default> Plugin for ResourcesPlugin<T> {
     fn build(&self, app: &mut App) {
         let path = std::env::current_dir().unwrap();
         let path = Path::new(&path);
@@ -52,7 +56,7 @@ impl Plugin for ResourcesPlugin {
             return;
         };
 
-        app.insert_resource(UnityResource {
+        app.insert_resource(UnityResource::<T> {
             base_path: path.into(),
             materials_map: materials,
             textures_map,
@@ -62,8 +66,8 @@ impl Plugin for ResourcesPlugin {
         .add_systems(
             Startup,
             (
-                load_textures_system,
-                load_materials.after(load_textures_system),
+                load_textures_system::<T>,
+                load_materials::<T>.after(load_textures_system::<T>),
             ),
         );
     }
@@ -76,9 +80,9 @@ fn read_guid_path_map(path: &Path) -> Result<HashMap<String, String>> {
     Ok(texture_pathmap)
 }
 
-fn load_textures_system(
+fn load_textures_system<T: Default + Sync + Send + 'static>(
     asset_server: Res<AssetServer>,
-    mut unity_resources: ResMut<UnityResource>,
+    mut unity_resources: ResMut<UnityResource<T>>,
 ) {
     let Ok(textures) = load_textures(
         &unity_resources.base_path,
@@ -109,8 +113,8 @@ fn load_textures(
         })
 }
 
-fn load_materials(
-    mut unity_res: ResMut<UnityResource>,
+fn load_materials<T: Sync + Send + 'static + Default>(
+    mut unity_res: ResMut<UnityResource<T>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     unity_res.standard_materials = unity_res

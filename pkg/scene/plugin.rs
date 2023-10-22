@@ -1,17 +1,15 @@
-use bevity_primitives::{
-    load_camera_skybox_system, FileReference, UnityMeshFilterExtra, UnityMeshRendererExtra,
-    UnityMeshRequiresLoad, UnityPrefabInstance,
-};
+use bevity_primitives::*;
 use bevy::{
     ecs::{system::EntityCommands, world::EntityMut},
-    gltf::GltfNode,
     prelude::*,
     utils::HashMap,
 };
+use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 
 use crate::{
-    get_transform, ResourcesPlugin, UnityResource, UnityScene, UnitySceneObject, UnityTransformMeta,
+    get_transform, parse_scene_file, ResourcesPlugin, UnityRenderSettings, UnityResource,
+    UnityScene, UnitySceneObject, UnityTransformMeta,
 };
 
 #[derive(Default)]
@@ -34,22 +32,24 @@ pub trait MonoBehaviour {
     fn update_component(&self, cmd: &mut EntityMut);
 }
 
-impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBehaviour> Plugin
-    for ScenePlugin<T>
+impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBehaviour + Clone>
+    Plugin for ScenePlugin<T>
 {
     fn build(&self, app: &mut App) {
         // read build settings and parse all scenes
 
         app.insert_resource::<SceneResource<T>>(SceneResource::default())
-            .add_plugins(ResourcesPlugin)
+            .add_plugins(ResourcesPlugin::<T>::default())
             .insert_resource(UnityEntityMap::default())
             .add_systems(Update, load_scene_if_changed::<T>)
+            .insert_resource(Msaa::Off)
             .add_systems(
                 Update,
                 (
                     load_camera_skybox_system,
-                    load_unity_mesh_system,
+                    load_unity_mesh_system::<T>,
                     fix_gltf_mesh,
+                    load_mesh_collider_system,
                 ),
             );
     }
@@ -60,9 +60,11 @@ pub struct LocalSceneConfig {
     pub current_loaded: Option<String>,
 }
 
-fn load_scene_if_changed<T: Sync + Send + MonoBehaviour + 'static>(
+fn load_scene_if_changed<
+    T: Sync + Send + MonoBehaviour + 'static + Default + DeserializeOwned + Clone,
+>(
     scene: Res<SceneResource<T>>,
-    mut unity_res: ResMut<UnityResource>,
+    mut unity_res: ResMut<UnityResource<T>>,
     mut local: Local<LocalSceneConfig>,
     commands: Commands,
     asset_server: Res<AssetServer>,
@@ -97,25 +99,24 @@ fn load_scene_if_changed<T: Sync + Send + MonoBehaviour + 'static>(
     local.current_loaded = Some(current.clone());
 }
 
-fn load_scene<T>(
+fn load_scene<T: Sync + Send + 'static + Default + MonoBehaviour + Clone>(
     scene: &UnityScene<T>,
     mut commands: Commands,
-    unity_res: &mut ResMut<UnityResource>,
+    unity_res: &mut ResMut<UnityResource<T>>,
     asset_server: &Res<AssetServer>,
     entity_map: &mut UnityEntityMap,
 ) where
-    T: MonoBehaviour,
+    T: MonoBehaviour + DeserializeOwned,
 {
     let render_settings = scene.get_render_settings();
-
-    let mut transform_map: HashMap<i64, Entity> = HashMap::new();
-
     if let Some(render_settings) = render_settings {
         commands.insert_resource(AmbientLight {
             color: render_settings.indirect_specular_color.into(),
             brightness: render_settings.ambient_intensity,
         });
     }
+
+    let mut transform_map: HashMap<i64, Entity> = HashMap::new();
 
     scene
         .1
@@ -136,7 +137,10 @@ fn load_scene<T>(
 
             let local = transform.into();
 
-            let mut entity = commands.spawn(TransformBundle { local, ..default() });
+            let mut entity = commands.spawn((
+                TransformBundle { local, ..default() },
+                Name::new(game_object.name.clone()),
+            ));
             entity.insert(UnityTransformMeta { object_id: comp_id });
             entity.insert(VisibilityBundle {
                 visibility: if game_object.is_active() {
@@ -183,9 +187,18 @@ fn load_scene<T>(
             let local = prefab.get_transform_for_prefab().into();
             let mut entity = commands.spawn((TransformBundle { local, ..default() },));
 
-            spawn_prefab(prefab, local, &mut entity, unity_res, asset_server);
+            spawn_prefab(
+                *id,
+                prefab,
+                local,
+                &mut entity,
+                unity_res,
+                asset_server,
+                &render_settings,
+            );
 
-            let file_id = prefab.get_local_id(*id);
+            let (file_id, name) = prefab.get_local_id_and_name(*id);
+            entity.insert(Name::new(name));
 
             println!("creating prefab: {}", file_id);
 
@@ -229,12 +242,14 @@ fn load_scene<T>(
         });
 }
 
-fn spawn_prefab(
+fn spawn_prefab<T: Sync + Send + 'static + Default + DeserializeOwned + MonoBehaviour + Clone>(
+    id: i64,
     prefab: &UnityPrefabInstance,
     transform: Transform,
     cmd: &mut EntityCommands,
-    res: &mut ResMut<UnityResource>,
+    res: &mut UnityResource<T>,
     asset_server: &Res<AssetServer>,
+    render_settings: &Option<&UnityRenderSettings>,
 ) {
     let Some(guid) = &prefab.source.guid else {
         // some prefab without a guid? thats a bug
@@ -254,37 +269,103 @@ fn spawn_prefab(
             cmd,
             res,
             asset_server,
-            true,
+        );
+
+        return;
+    }
+
+    if referenced_prefab.ends_with(".prefab") {
+        instantiate_prefab(
+            id,
+            guid,
+            &referenced_prefab.clone(),
+            transform,
+            cmd,
+            res,
+            asset_server,
+            render_settings,
         );
     }
 }
 
-// fn fixup_gltf(
-//     mut ev_asset: EventReader<AssetEvent<GltfNode>>,
-//     mut assets: ResMut<Assets<GltfNode>>,
-// ) {
-//     for ev in ev_asset.iter() {
-//         match ev {
-//             AssetEvent::Created { handle } => {
-//                 let node = assets.get_mut(handle).unwrap();
-//                 // ^ unwrap is OK, because we know it is loaded now
-
-//                 node.transform
-//                     .rotate_axis(Vec3::AXES[2], std::f32::consts::PI);
-//             }
-//             _ => {}
-//         }
-//     }
-// }
-
-fn instantiate_gltf(
+fn instantiate_prefab<
+    T: Sync + Send + 'static + Default + DeserializeOwned + MonoBehaviour + Clone,
+>(
+    scene_id: i64,
     guid: &str,
     path: &str,
     transform: Transform,
     cmd: &mut EntityCommands,
-    res: &mut ResMut<UnityResource>,
+    res: &mut UnityResource<T>,
     asset_server: &Res<AssetServer>,
-    add_fixup: bool,
+    render_settings: &Option<&UnityRenderSettings>,
+) {
+    let path = res.base_path.join("..").join(path);
+    // let prefab = if let Some(scene) = res.prefabs.get(guid) {
+    //     scene
+    // } else {
+    //     let scene = parse_scene_file(guid, &path.to_string_lossy()).unwrap();
+    //     res.prefabs.insert(guid.to_string(), scene);
+
+    //     // scene
+    // };
+    let prefab = res
+        .prefabs
+        .entry(guid.to_string())
+        .or_insert_with(|| parse_scene_file(guid, &path.to_string_lossy()).unwrap());
+    let prefab = UnityScene(prefab.0.clone(), prefab.1.clone());
+
+    prefab
+        .1
+        .iter()
+        .filter_map(|(id, g)| match g {
+            UnitySceneObject::GameObject(g) => Some((id, g)),
+            _ => None,
+        })
+        // id is already set by the prefab isntantiation step before this, so ignoring
+        .for_each(|(_, game_object)| {
+            println!("got a gameobject in the prefab!");
+            game_object
+                .components
+                .iter()
+                .filter_map(|c| {
+                    let comp = prefab.1.get(&c.component.file_id)?;
+                    Some((c.component.file_id, comp))
+                })
+                .for_each(|(object_id, comp)| {
+                    let object_id = (object_id ^ scene_id) & 0x7fffffffffffffff;
+                    comp.spawn_meta(object_id, cmd);
+                    comp.spawn_components(object_id, transform, render_settings, res, cmd);
+                });
+        });
+
+    prefab
+        .1
+        .iter()
+        .filter_map(|(id, game_object)| match game_object {
+            UnitySceneObject::PrefabInstance(p) => Some((id, p)),
+            _ => None,
+        })
+        .for_each(|(_, p)| {
+            spawn_prefab(
+                scene_id,
+                p,
+                transform,
+                cmd,
+                res,
+                asset_server,
+                render_settings,
+            );
+        });
+}
+
+fn instantiate_gltf<T: Sync + Send + 'static + Default>(
+    guid: &str,
+    path: &str,
+    transform: Transform,
+    cmd: &mut EntityCommands,
+    res: &mut UnityResource<T>,
+    asset_server: &Res<AssetServer>,
 ) {
     let scene = if let Some(scene) = res.models.get(guid) {
         scene.clone()
@@ -296,11 +377,7 @@ fn instantiate_gltf(
         handle
     };
 
-    let visibility = if add_fixup {
-        Visibility::Hidden
-    } else {
-        Visibility::Inherited
-    };
+    let visibility = Visibility::Hidden;
 
     cmd.insert(SceneBundle {
         scene: scene.clone(),
@@ -309,9 +386,7 @@ fn instantiate_gltf(
         ..default()
     });
 
-    if add_fixup {
-        cmd.insert(FixGltfTransforms);
-    }
+    cmd.insert(FixGltfTransforms);
 }
 
 #[derive(Component)]
@@ -372,7 +447,7 @@ fn fix_gltf_mesh(
 //     });
 // }
 
-pub fn load_unity_mesh_system(
+pub fn load_unity_mesh_system<T: Sync + Send + 'static + Default>(
     meshes: Query<
         (
             Entity,
@@ -384,7 +459,7 @@ pub fn load_unity_mesh_system(
     >,
     mut commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
-    mut unity_res: ResMut<UnityResource>,
+    mut unity_res: ResMut<UnityResource<T>>,
 ) {
     for (entity, transform, mesh_filter, mesh_renderer) in &meshes {
         let mf = &mesh_filter.mesh;
@@ -406,9 +481,9 @@ pub fn load_unity_mesh_system(
     }
 }
 
-fn load_material(
+fn load_material<T: Sync + Send + 'static + Default>(
     mesh_renderer: &UnityMeshRendererExtra,
-    unity_res: &ResMut<UnityResource>,
+    unity_res: &ResMut<UnityResource<T>>,
 ) -> Option<Handle<StandardMaterial>> {
     let mr = mesh_renderer.materials.first()?.guid.clone()?;
     let mat = unity_res.standard_materials.get(&mr)?;
@@ -416,10 +491,10 @@ fn load_material(
     Some(mat.clone())
 }
 
-fn load_primitve_mesh(
+fn load_primitve_mesh<T: Sync + Send + 'static + Default>(
     mf: &FileReference,
     mesh_assets: &mut ResMut<Assets<Mesh>>,
-    loaded: &mut ResMut<UnityResource>,
+    loaded: &mut ResMut<UnityResource<T>>,
 ) -> Handle<Mesh> {
     let unique_id = format!("{}_{}", mf.guid.clone().unwrap_or_default(), mf.file_id);
     if let Some(existing) = loaded.meshes.get(&unique_id) {
@@ -432,6 +507,32 @@ fn load_primitve_mesh(
 
         // plane
         10209 => mesh_assets.add(Mesh::from(shape::Plane::from_size(10.0))),
+        // cylinder
+        10206 => mesh_assets.add(
+            shape::Cylinder {
+                radius: 0.5,
+                height: 2.0,
+                ..default()
+            }
+            .into(),
+        ),
+        // sphere
+        10207 => mesh_assets.add(
+            shape::UVSphere {
+                radius: 0.5,
+                ..default()
+            }
+            .into(),
+        ),
+        // capsule
+        10208 => mesh_assets.add(
+            shape::Capsule {
+                radius: 0.5,
+                depth: 1.0,
+                ..default()
+            }
+            .into(),
+        ),
         _ => mesh_assets.add(Mesh::from(shape::UVSphere {
             radius: 1.0,
             ..default()

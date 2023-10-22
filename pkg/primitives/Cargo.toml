@@ -13,4 +13,5 @@ anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 bevy.workspace = true
+bevy_rapier3d.workspace = true
 bevity-generator = { path = "../generator" }

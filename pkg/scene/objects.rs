@@ -14,6 +14,11 @@ bevity_generator::inbuilt_component_list!((
     MeshFilter,
     MeshRenderer,
     PrefabInstance,
+    MeshCollider,
+    BoxCollider,
+    SphereCollider,
+    CapsuleCollider,
+    Rigidbody,
     RenderSettings
 ));
 
@@ -32,13 +37,13 @@ pub fn get_transform<'a, T>(
     })
 }
 
-impl<T: MonoBehaviour> UnitySceneObject<T> {
+impl<T: MonoBehaviour + Sync + Send + 'static + Default> UnitySceneObject<T> {
     pub fn spawn_components(
         &self,
         object_id: i64,
         transform: bevy::prelude::Transform,
         render_settings: &Option<&UnityRenderSettings>,
-        unity_res: &bevy::prelude::ResMut<UnityResource>,
+        unity_res: &UnityResource<T>,
         commands: &mut bevy::ecs::system::EntityCommands,
     ) {
         match self {
@@ -57,6 +62,17 @@ impl<T: MonoBehaviour> UnitySceneObject<T> {
             UnitySceneObject::Light(l) => l.add_light_bundle(transform, commands),
             UnitySceneObject::MeshFilter(mf) => mf.add_mesh_filter_meta(commands),
             UnitySceneObject::MeshRenderer(mr) => mr.add_mesh_renderer_meta(commands),
+            UnitySceneObject::BoxCollider(b) => b.add_box_collider(&transform, commands),
+            UnitySceneObject::SphereCollider(sphere_collider) => {
+                sphere_collider.add_sphere_collider(&transform, commands)
+            }
+            UnitySceneObject::CapsuleCollider(capsule_collider) => {
+                capsule_collider.add_capsule_collider(&transform, commands)
+            }
+            UnitySceneObject::MeshCollider(mesh_collider) => {
+                mesh_collider.add_mesh_collider(commands)
+            }
+            UnitySceneObject::Rigidbody(rb) => rb.add_rigidbody(commands),
             UnitySceneObject::MonoBehaviour(v) => v.add_component_to_entity(object_id, commands),
             _ => {}
         };
