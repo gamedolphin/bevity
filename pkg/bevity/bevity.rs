@@ -36,7 +36,7 @@ impl<
         app.add_plugins(ScenePlugin::<T>::default());
         app.add_plugins(EditorPlugin::<T>::default());
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
-        app.add_plugins(RapierDebugRenderPlugin::default());
+        // app.add_plugins(RapierDebugRenderPlugin::default());
         app.add_plugins(T::default());
         app.add_plugins(bevity_settings::SettingsPlugin);
     }

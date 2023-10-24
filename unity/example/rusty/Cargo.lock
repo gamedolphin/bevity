@@ -460,6 +460,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-tnua"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69374e6955602c7f73a2cab0241d209d2e96e7869d1128292969c535e558d18c"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+]
+
+[[package]]
 name = "bevy_a11y"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1100,6 +1110,15 @@ dependencies = [
  "glyph_brush_layout",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "bevy_third_person_camera"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6db6090a267bc945f43118c974b3d117d3276454b44afd21262b2e48f8c05d89"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -3313,8 +3332,12 @@ dependencies = [
  "bevity",
  "bevy",
  "bevy-inspector-egui",
+ "bevy-tnua",
+ "bevy_rapier3d",
+ "bevy_third_person_camera",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]

@@ -186,6 +186,7 @@ fn load_scene<T: Sync + Send + 'static + Default + MonoBehaviour + Clone>(
         .for_each(|(id, prefab)| {
             let local = prefab.get_transform_for_prefab().into();
             let mut entity = commands.spawn((TransformBundle { local, ..default() },));
+            entity.insert(VisibilityBundle::default());
 
             spawn_prefab(
                 *id,
@@ -200,7 +201,7 @@ fn load_scene<T: Sync + Send + 'static + Default + MonoBehaviour + Clone>(
             let (file_id, name) = prefab.get_local_id_and_name(*id);
             entity.insert(Name::new(name));
 
-            println!("creating prefab: {}", file_id);
+            // println!("creating prefab: {}", file_id);
 
             let guid = format!("GlobalObjectId_V1-2-{}-{}-0", &scene.0, file_id);
             entity_map.guid_map.insert(guid, entity.id());
@@ -301,18 +302,16 @@ fn instantiate_prefab<
     render_settings: &Option<&UnityRenderSettings>,
 ) {
     let path = res.base_path.join("..").join(path);
-    // let prefab = if let Some(scene) = res.prefabs.get(guid) {
-    //     scene
-    // } else {
-    //     let scene = parse_scene_file(guid, &path.to_string_lossy()).unwrap();
-    //     res.prefabs.insert(guid.to_string(), scene);
-
-    //     // scene
-    // };
-    let prefab = res
-        .prefabs
-        .entry(guid.to_string())
-        .or_insert_with(|| parse_scene_file(guid, &path.to_string_lossy()).unwrap());
+    let prefab = res.prefabs.entry(guid.to_string()).or_insert_with(|| {
+        let scene = parse_scene_file(guid, &path.to_string_lossy());
+        match scene {
+            Ok(scene) => scene,
+            Err(e) => {
+                tracing::error!("failed to parse prefab file: {}", e);
+                UnityScene::default()
+            }
+        }
+    });
     let prefab = UnityScene(prefab.0.clone(), prefab.1.clone());
 
     prefab
@@ -347,15 +346,20 @@ fn instantiate_prefab<
             _ => None,
         })
         .for_each(|(_, p)| {
-            spawn_prefab(
-                scene_id,
-                p,
-                transform,
-                cmd,
-                res,
-                asset_server,
-                render_settings,
-            );
+            cmd.with_children(|children| {
+                let local = p.get_transform_for_prefab().into();
+                let mut entity = children.spawn((TransformBundle { local, ..default() },));
+
+                spawn_prefab(
+                    scene_id,
+                    p,
+                    local,
+                    &mut entity,
+                    res,
+                    asset_server,
+                    render_settings,
+                );
+            });
         });
 }
 

@@ -14,6 +14,9 @@ pub struct UnityMaterial {
 
     #[serde(alias = "m_SavedProperties")]
     pub properties: SavedProperties,
+
+    #[serde(default, alias = "stringTagMap")]
+    pub string_tags: HashMap<String, String>,
 }
 
 impl UnityMaterial {
@@ -26,6 +29,16 @@ impl UnityMaterial {
     }
 
     pub fn get_standard_material(&self) -> Option<StandardMaterial> {
+        let alpha_mode = if let Some(render_type) = self.string_tags.get("RenderType") {
+            if render_type == "Transparent" {
+                AlphaMode::Blend
+            } else {
+                AlphaMode::Mask(0.1)
+            }
+        } else {
+            AlphaMode::Opaque
+        };
+
         match self.shader.file_id {
             46 => {
                 let base_color = self
@@ -51,6 +64,7 @@ impl UnityMaterial {
                     base_color,
                     emissive,
                     metallic,
+                    alpha_mode,
                     ..default()
                 })
             }

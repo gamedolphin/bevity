@@ -21,11 +21,18 @@ impl UnityBoxCollider {
         let scale_x = transform.scale.x;
         let scale_y = transform.scale.y;
         let scale_z = transform.scale.z;
-        commands.insert(Collider::cuboid(
-            0.5 * scale_x,
-            0.5 * scale_y,
-            0.5 * scale_z,
-        ));
+
+        commands.with_children(|children| {
+            children
+                .spawn(Collider::cuboid(
+                    0.5 * scale_x * self.size.x,
+                    0.5 * scale_y * self.size.y,
+                    0.5 * scale_z * self.size.z,
+                ))
+                .insert(TransformBundle::from(Transform::from_translation(
+                    self.center.transform_coordinates(),
+                )));
+        });
     }
 }
 
@@ -43,7 +50,12 @@ pub struct UnitySphereCollider {
 
 impl UnitySphereCollider {
     pub fn add_sphere_collider(&self, transform: &Transform, commands: &mut EntityCommands) {
-        commands.insert(Collider::ball(transform.scale.x * 0.5));
+        commands.with_children(|children| {
+            let center = self.center.transform_coordinates();
+            children
+                .spawn(Collider::ball(transform.scale.x * self.radius))
+                .insert(TransformBundle::from(Transform::from_translation(center)));
+        });
     }
 }
 
@@ -70,10 +82,16 @@ impl UnityCapsuleCollider {
         let radius_scale = transform.scale.x.max(transform.scale.z);
         let height_scale = transform.scale.y;
 
-        commands.insert(Collider::capsule_y(
-            self.height / 4.0 * height_scale,
-            self.radius * radius_scale,
-        )); // default y axis collider
+        commands.with_children(|children| {
+            children
+                .spawn(Collider::capsule_y(
+                    self.height / 4.0 * height_scale,
+                    self.radius * radius_scale,
+                ))
+                .insert(TransformBundle::from(Transform::from_translation(
+                    self.center.transform_coordinates(),
+                )));
+        });
     }
 }
 
@@ -132,18 +150,23 @@ pub struct UnityRigidbody {
 
 impl UnityRigidbody {
     pub fn add_rigidbody(&self, commands: &mut EntityCommands) {
-        if self.is_kinematic == 1 {
-            commands.insert(Sensor);
+        // if self.is_kinematic == 1 {
+        //     commands.insert(Sensor);
 
-            return;
-        }
+        //     return;
+        // }
 
-        let local_center_of_mass: Vec3 = self.center_of_mass.into();
+        let local_center_of_mass: Vec3 = self.center_of_mass.transform_coordinates();
         let principal_inertia_local_frame = self.inertia_rotation.into();
         let principal_inertia = self.inertia_tensor.into();
+        let rb = if self.is_kinematic == 1 {
+            RigidBody::KinematicPositionBased
+        } else {
+            RigidBody::Dynamic
+        };
 
         commands.insert((
-            RigidBody::Dynamic,
+            rb,
             AdditionalMassProperties::MassProperties(MassProperties {
                 local_center_of_mass,
                 mass: self.mass,
@@ -157,7 +180,7 @@ impl UnityRigidbody {
         ));
 
         if self.use_gravity == 1 {
-            commands.insert(GravityScale(1.0));
+            commands.insert(GravityScale(10.0));
         } else {
             commands.insert(GravityScale(0.0));
         }

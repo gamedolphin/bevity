@@ -8,6 +8,16 @@ pub struct UnityVector3 {
     pub z: f32,
 }
 
+impl UnityVector3 {
+    pub fn transform_coordinates(&self) -> Vec3 {
+        Vec3 {
+            x: self.x,
+            y: self.y,
+            z: -self.z,
+        }
+    }
+}
+
 impl From<UnityVector3> for Vec3 {
     fn from(value: UnityVector3) -> Self {
         Self {
