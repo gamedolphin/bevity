@@ -29,7 +29,7 @@ pub struct UnityEntityMap {
 
 pub trait MonoBehaviour {
     fn add_component_to_entity(&self, object_id: i64, cmd: &mut EntityCommands);
-    fn update_component(&self, cmd: &mut EntityMut);
+    fn update_component(&self, cmd: &mut EntityWorldMut);
 }
 
 impl<T: serde::de::DeserializeOwned + Sync + Send + 'static + Default + MonoBehaviour + Clone>

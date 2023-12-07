@@ -66,7 +66,7 @@ public static class Cargo
         Watcher.Start(process.StandardInput);
 
         running = true;
-        UnityEngine.Physics.autoSimulation = false;
+        UnityEngine.Physics.simulationMode = SimulationMode.Script;
     }
 
     public static void Stop()

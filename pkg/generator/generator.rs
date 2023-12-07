@@ -204,7 +204,7 @@ pub fn exported_component_list(item: TokenStream) -> TokenStream {
                 };
             }
 
-            fn update_component(&self, cmd: &mut bevy::ecs::world::EntityMut) {
+            fn update_component(&self, cmd: &mut bevy::ecs::world::EntityWorldMut) {
                 match self {
                     #(#update_components)*
 

@@ -92,7 +92,11 @@ pub fn load_camera_skybox_system(
             continue;
         };
 
-        if asset_server.get_load_state(skybox) != LoadState::Loaded {
+        let Some(load_state) = asset_server.get_load_state(skybox) else {
+            continue;
+        };
+
+        if load_state != LoadState::Loaded {
             continue; //not ready yet
         }
 
